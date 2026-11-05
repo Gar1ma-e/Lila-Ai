@@ -277,6 +277,15 @@ textarea, input{font-family:inherit}
 .lily-api-actions{display:flex;gap:8px;margin-top:10px}
 .lily-api-note{margin-top:10px;font-size:.72rem}
 .lily-ai-hint{margin-top:8px;font-size:.78rem;color:var(--accent-2)}
+.lily-api-panel{max-height:55vh;overflow-y:auto}
+.lily-api-panel select{width:100%;margin-top:8px;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);outline:none;font-size:.85rem}
+.lily-api-panel select option,.lily-mode-select option{background:#0b1020;color:#f8fafc}
+.engine-section{margin-top:12px}
+.engine-section p{margin:8px 0}
+.engine-progress{height:6px;border-radius:99px;background:var(--glass-strong);overflow:hidden;margin-top:12px}
+.engine-progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));transition:width .2s}
+.lily-mode-select{background:var(--glass);border:1px solid var(--border);border-radius:999px;color:var(--text);padding:5px 10px;font-size:.75rem;outline:none;cursor:pointer}
+.lily-modal-msg{white-space:pre-wrap}
 .lily-modal-body{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
 .lily-empty{margin:auto;text-align:center;color:var(--muted);max-width:420px}
 .lily-empty .big{font-size:2.6rem;margin-bottom:12px}
@@ -1017,6 +1026,7 @@ textarea, input{font-family:inherit}
             <small>Helping you study</small>
           </div>
         </div>
+        <select class="lily-mode-select" id="lilyModeFocus" title="How Lily responds" onchange="setLilyMode('focus', this.value)"></select>
       </div>
       <div class="lily-modal-body" id="focusLilyBody">
         <div class="lily-modal-msg her">Upload your notes or tell me what you're studying, and I'll find resources, help you take notes, and clarify anything confusing.</div>
@@ -1046,20 +1056,52 @@ textarea, input{font-family:inherit}
         </div>
       </div>
       <div class="lily-head-actions">
-        <span class="lily-gear" title="Connect a real AI" onclick="toggleLilyApiPanel()">⚙️</span>
+        <select class="lily-mode-select" id="lilyModeMain" title="How Lily responds" onchange="setLilyMode('main', this.value)"></select>
+        <span class="lily-gear" title="AI engine settings" onclick="toggleLilyApiPanel()">⚙️</span>
         <span class="x" onclick="closeLilyChat()">✕</span>
       </div>
     </div>
 
     <div class="lily-api-panel" id="lilyApiPanel" style="display:none">
-      <p><strong style="color:var(--text)">Real AI mode.</strong> Paste your own Anthropic API key and Lily answers with a real language model instead of pre-written lines. Her Focus Room chat uses the same key.</p>
-      <input type="password" id="lilyApiKeyInput" placeholder="sk-ant-..." autocomplete="off">
-      <input type="text" id="lilyApiModelInput" placeholder="Model (default: claude-sonnet-5-5)">
-      <div class="lily-api-actions">
-        <button class="saveBtn" onclick="saveLilyApi()">Save</button>
-        <button class="ghostBtn" onclick="clearLilyApi()">Remove key</button>
+      <p><strong style="color:var(--text)">AI engine.</strong> Choose how Lily thinks. The two on-device options need no key and your chats never leave your computer. Her Focus Room chat uses the same engine.</p>
+      <select id="lilyEngineSelect" onchange="onEngineChange()">
+        <option value="offline">Offline — pre-written replies</option>
+        <option value="builtin">On-device — your browser's built-in AI (free, no key)</option>
+        <option value="webllm">On-device — downloadable model (free, no key)</option>
+        <option value="api">Cloud — my own API key</option>
+      </select>
+
+      <div class="engine-section" id="engineBuiltin" style="display:none">
+        <p id="builtinStatus">Uses the AI that comes with recent desktop Chrome or Edge. One-time download of a few GB, then it works offline. Replies are best in English.</p>
+        <button class="saveBtn" onclick="setupBuiltIn()">Set up built-in AI</button>
       </div>
-      <p class="lily-api-note">The key is stored only in this browser and sent straight to Anthropic from here. Anyone who can open this browser profile can read it, so skip this on shared computers. Usage is billed to your own account.</p>
+
+      <div class="engine-section" id="engineWebllm" style="display:none">
+        <select id="webllmModelSelect">
+          <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Small — Llama 3.2 1B (about 0.9 GB, lighter machines)</option>
+          <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Better — Llama 3.2 3B (about 2.3 GB, needs a decent GPU)</option>
+        </select>
+        <p id="webllmStatus">Downloads an open model once and runs it on your graphics card (needs WebGPU). Smaller models are noticeably less capable than cloud AI.</p>
+        <button class="saveBtn" onclick="setupWebLLM()">Download and start</button>
+      </div>
+
+      <div class="engine-section" id="engineApi" style="display:none">
+        <input type="password" id="lilyApiKeyInput" placeholder="Anthropic API key (sk-ant-...)" autocomplete="off">
+        <input type="text" id="lilyApiModelInput" placeholder="Model (default: claude-sonnet-5-5)">
+        <div class="lily-api-actions">
+          <button class="saveBtn" onclick="saveLilyApi()">Save key</button>
+          <button class="ghostBtn" onclick="clearLilyApi()">Remove key</button>
+        </div>
+        <p class="lily-api-note">The key stays in this browser and goes straight to Anthropic. Anyone who can open this browser profile can read it, so skip this on shared computers. Usage is billed to your own account.</p>
+      </div>
+
+      <div class="engine-progress" id="engineProgress" style="display:none"><div id="engineProgressBar"></div></div>
+      <p id="engineProgressText" style="display:none;margin-top:6px"></p>
+
+      <div class="lily-api-actions">
+        <button class="ghostBtn" onclick="checkBrowserAI()">Check my browser</button>
+      </div>
+      <p id="engineCheckResult" class="lily-api-note"></p>
     </div>
 
     <div class="lily-modal-body" id="lilyModalBody">
@@ -1067,7 +1109,7 @@ textarea, input{font-family:inherit}
         <div class="big">💜</div>
         <h4>Hi, I'm Lily</h4>
         <p>Your assistant around LILAverse — ask me anything, or try one of these:</p>
-        <p class="lily-ai-hint" id="lilyAiHint">Right now I'm in offline mode, so my replies are pre-written. Tap ⚙️ above to connect a real AI for natural conversation.</p>
+        <p class="lily-ai-hint" id="lilyAiHint">Right now I'm in offline mode, so my replies are pre-written. Tap ⚙️ to pick an AI engine. There's a free on-device one that needs no key.</p>
         <div class="lily-suggestions">
           <div class="lily-suggest-chip" onclick="quickAsk('Suggest a book for tonight')">📚 Suggest a book</div>
           <div class="lily-suggest-chip" onclick="quickAsk('Help me reflect on today')">📖 Reflect on today</div>
@@ -1646,15 +1688,15 @@ function sendLilyModal(){
     addLilyMessage(reply, 'her');
   };
 
-  if(getApiKey()){
+  if(aiOn()){
     lilyHistory.push({role:'user', content:text});
-    askClaude(lilySystemPrompt(), lilyHistory)
+    generateReply(lilySystemPrompt(), lilyHistory, 'main')
       .then(reply => { lilyHistory.push({role:'assistant', content:reply}); finish(reply); })
       .catch(err => { lilyHistory.pop(); finish(aiErrorMessage(err)); });
     return;
   }
 
-  const reply = craftLilyReply(text);
+  const reply = offlineModeAdjust(craftLilyReply(text), text, getLilyMode('main'));
   setTimeout(()=>finish(reply), 700 + Math.random()*500);
 }
 
@@ -2027,9 +2069,9 @@ function sendFocusLily(){
   body.appendChild(typing);
   body.scrollTop = body.scrollHeight;
 
-  if(getApiKey()){
+  if(aiOn()){
     focusHistory.push({role:'user', content:text});
-    askClaude(focusSystemPrompt(), focusHistory)
+    generateReply(focusSystemPrompt(), focusHistory, 'focus')
       .then(reply => { focusHistory.push({role:'assistant', content:reply}); appendFocusHer(reply); })
       .catch(err => { focusHistory.pop(); appendFocusHer(aiErrorMessage(err)); });
     return;
@@ -2073,6 +2115,8 @@ function sendFocusLily(){
     ]);
   }
 
+  if(!showResources) reply = offlineModeAdjust(reply, text, getLilyMode('focus'));
+
   setTimeout(()=>{
     const t = document.getElementById('focusTyping');
     if(t) t.remove();
@@ -2095,15 +2139,50 @@ function sendFocusLily(){
   }, 700 + Math.random()*500);
 }
 
-/* ============ REAL AI (bring your own key) ============
-   A static page has no model of its own, so with a key Lily calls the Anthropic
-   API straight from the browser; without one she falls back to the pre-written
-   replies above. The key lives only in localStorage on this device. */
+/* ============ AI ENGINES + MODES ============
+   Lily can run on: offline pre-written lines, the browser's built-in on-device AI,
+   a downloadable on-device model (WebLLM), or the Anthropic API with your own key.
+   Everything is stateless per message: the system prompt + recent history are sent each time. */
 const LILA_DEFAULT_MODEL = 'claude-sonnet-5-5';
 let lilyHistory = [], focusHistory = [];
 
+/* -- Modes (same idea as Planning vs Fast in agent tools) -- */
+const LILY_MODES = {
+  fast:      { label:'⚡ Fast',      desc:'Quick, direct answers',                    maxTokens:350, prompt:'MODE: Fast. Answer directly in one to four sentences. No preamble, no plan, and no follow-up question unless it is essential.' },
+  plan:      { label:'🧭 Planning',  desc:'Plans first, then waits for your OK',      maxTokens:900, prompt:'MODE: Planning. For anything bigger than a simple question, first write a short numbered plan (3 to 6 steps) and ask whether to go ahead or change it. Only carry out the steps after they confirm. For simple questions, just answer.' },
+  tutor:     { label:'🎓 Tutor',     desc:'Teaches by asking, one step at a time',    maxTokens:600, prompt:'MODE: Tutor. Teach step by step: first check what they already know with one question, explain in small pieces, then give one practice question and wait for their answer. Never dump everything at once.' },
+  companion: { label:'💜 Companion', desc:'A gentle, unhurried listener',             maxTokens:500, prompt:'MODE: Companion. Be a gentle, unhurried listener: reflect what you hear, validate without gushing, and only offer suggestions if they ask.' }
+};
+const LILY_DEFAULT_MODES = { main:'companion', focus:'tutor' };
+function getLilyMode(chat){
+  const m = localStorage.getItem('lilaMode-' + chat);
+  return LILY_MODES[m] ? m : LILY_DEFAULT_MODES[chat];
+}
+function setLilyMode(chat, mode){
+  if(!LILY_MODES[mode]) return;
+  localStorage.setItem('lilaMode-' + chat, mode);
+  showToast('Lily', LILY_MODES[mode].label + ' — ' + LILY_MODES[mode].desc);
+}
+function renderModeSelectors(){
+  [['lilyModeMain','main'],['lilyModeFocus','focus']].forEach(([id, chat])=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = Object.entries(LILY_MODES).map(([k, m]) => `<option value="${k}" title="${m.desc}">${m.label}</option>`).join('');
+    sel.value = getLilyMode(chat);
+  });
+}
+
+/* -- Engine selection -- */
 function getApiKey(){ return localStorage.getItem('lilaApiKey') || ''; }
 function getApiModel(){ return localStorage.getItem('lilaApiModel') || LILA_DEFAULT_MODEL; }
+function getChosenEngine(){ return localStorage.getItem('lilaEngine') || 'offline'; }
+function getEngine(){
+  const e = getChosenEngine();
+  if(e === 'api') return getApiKey() ? 'api' : 'offline';
+  if((e === 'builtin' || e === 'webllm') && localStorage.getItem('lilaReady-' + e) === '1') return e;
+  return 'offline';
+}
+function aiOn(){ return getEngine() !== 'offline'; }
 
 function lilaContext(){
   const name = currentProfile();
@@ -2120,9 +2199,23 @@ function focusSystemPrompt(){
   return `${LILY_BASE_PROMPT}\n\nRight now you're in Focus Room, helping them study. Explain concepts clearly with examples, quiz them one question at a time, and suggest techniques like active recall, spaced repetition or the Feynman method when useful. Keep answers focused and proportionate. Their timer is set to ${studyMinutes} minutes of study and ${breakMinutes} minutes of break. ${notes}\n\n${lilaContext()}`;
 }
 
-async function askClaude(system, history){
-  if(history.length > 20) history.splice(0, history.length - 20);
+/* -- One entry point: routes to whichever engine is active -- */
+async function generateReply(system, history, chat){
+  const mode = LILY_MODES[getLilyMode(chat)];
+  const fullSystem = `${system}\n\n${mode.prompt}`;
+  const engine = getEngine();
+  if(engine === 'builtin') return askBuiltIn(fullSystem, history);
+  if(engine === 'webllm') return askWebLLM(fullSystem, history, mode.maxTokens);
+  return askClaude(fullSystem, history, mode.maxTokens);
+}
+function trimHistory(history, keep){
+  if(history.length > keep) history.splice(0, history.length - keep);
   while(history.length && history[0].role !== 'user') history.shift();
+}
+
+/* -- Cloud: Anthropic API with the person's own key -- */
+async function askClaude(system, history, maxTokens){
+  trimHistory(history, 20);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
     headers:{
@@ -2131,7 +2224,7 @@ async function askClaude(system, history){
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true'
     },
-    body: JSON.stringify({ model:getApiModel(), max_tokens:700, system, messages:history })
+    body: JSON.stringify({ model:getApiModel(), max_tokens:maxTokens || 700, system, messages:history })
   });
   if(!res.ok){
     let detail = '';
@@ -2143,8 +2236,78 @@ async function askClaude(system, history){
   if(!text) throw new Error('empty reply');
   return text;
 }
+
+/* -- On-device 1: the browser's built-in Prompt API (Gemini Nano in Chrome, own model in Edge) -- */
+const BUILTIN_LANG = { expectedInputs:[{type:'text', languages:['en']}], expectedOutputs:[{type:'text', languages:['en']}] };
+async function createBuiltInSession(opts){
+  try{ return await LanguageModel.create({ ...BUILTIN_LANG, ...opts }); }
+  catch(e){ return await LanguageModel.create(opts); }   // older builds reject the language hints
+}
+async function askBuiltIn(system, history){
+  if(!('LanguageModel' in self)) throw new Error("this browser has no built-in AI");
+  trimHistory(history, 10);
+  const prior = history.slice(0, -1).map(m => ({ role:m.role, content:m.content }));
+  const last = history[history.length - 1];
+  const session = await createBuiltInSession({ initialPrompts:[{ role:'system', content:system }, ...prior] });
+  try{
+    const out = ((await session.prompt(last.content)) || '').trim();
+    if(!out) throw new Error('empty reply');
+    return out;
+  } finally {
+    if(typeof session.destroy === 'function') session.destroy();
+  }
+}
+
+/* -- On-device 2: WebLLM, an open model run on the graphics card via WebGPU -- */
+let webllmEngine = null, webllmLoadedModel = '', webllmLoading = null;
+function getWebLLMModel(){ return localStorage.getItem('lilaWebllmModel') || 'Llama-3.2-1B-Instruct-q4f16_1-MLC'; }
+async function ensureWebLLM(onProgress){
+  const model = getWebLLMModel();
+  if(webllmEngine && webllmLoadedModel === model) return webllmEngine;
+  if(webllmLoading) return webllmLoading;
+  webllmLoading = (async ()=>{
+    if(!navigator.gpu) throw new Error('this browser has no WebGPU');
+    const webllm = await import('https://esm.run/@mlc-ai/web-llm');
+    webllmEngine = await webllm.CreateMLCEngine(model, {
+      initProgressCallback: r => { if(onProgress) onProgress(r.progress || 0, r.text || ''); }
+    });
+    webllmLoadedModel = model;
+    return webllmEngine;
+  })();
+  try{ return await webllmLoading; } finally { webllmLoading = null; }
+}
+async function askWebLLM(system, history, maxTokens){
+  if(!webllmEngine) showToast('Lily', 'Waking up the on-device model. The first reply takes a while.');
+  const engine = await ensureWebLLM();
+  trimHistory(history, 10);
+  const res = await engine.chat.completions.create({
+    messages:[{ role:'system', content:system }, ...history],
+    max_tokens: maxTokens || 600,
+    temperature: 0.8
+  });
+  const text = ((res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content) || '').trim();
+  if(!text) throw new Error('empty reply');
+  return text;
+}
+
+/* -- Offline fallback: shape the pre-written reply to the chosen mode -- */
+function offlineModeAdjust(reply, text, mode){
+  const lower = text.toLowerCase();
+  if(mode === 'fast'){
+    const m = reply.match(/^.*?[.!?](\s|$)/);
+    return m ? m[0].trim() : reply;
+  }
+  if(mode === 'plan' && /(plan|schedule|exam|test|prepare|revise|study for|deadline)/.test(lower)){
+    return "Here's a rough plan before we start:\n1. Pin down exactly what's covered and the date.\n2. Split it into small chunks, one per session.\n3. Do a short recall check after each chunk.\n4. Keep the last session for review and weak spots.\nWant me to change anything, or should we begin with step 1?";
+  }
+  if(mode === 'tutor' && /(explain|what is|what does|how does|teach|confus)/.test(lower)){
+    return "Before I explain, what's your current understanding of it, even if it's rough? Tell me and I'll build from there.";
+  }
+  return reply;
+}
+
 function aiErrorMessage(err){
-  return `I couldn't reach the AI just now (${err.message}). Check your key and model in the ⚙️ settings and try again.`;
+  return `I couldn't get an answer from the AI just now (${err.message}). Open ⚙️ to check the engine setup, then try again.`;
 }
 function appendFocusHer(text){
   const t = document.getElementById('focusTyping');
@@ -2157,17 +2320,108 @@ function appendFocusHer(text){
   body.scrollTop = body.scrollHeight;
 }
 
+/* -- Settings panel -- */
+function showEngineSection(){
+  const e = getChosenEngine();
+  document.getElementById('engineBuiltin').style.display = e === 'builtin' ? 'block' : 'none';
+  document.getElementById('engineWebllm').style.display = e === 'webllm' ? 'block' : 'none';
+  document.getElementById('engineApi').style.display = e === 'api' ? 'block' : 'none';
+}
+function showEngineProgress(frac, text){
+  document.getElementById('engineProgress').style.display = 'block';
+  document.getElementById('engineProgressBar').style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+  const t = document.getElementById('engineProgressText');
+  t.style.display = 'block';
+  t.textContent = text || (Math.round(frac * 100) + '%');
+}
+function hideEngineProgress(){
+  document.getElementById('engineProgress').style.display = 'none';
+  document.getElementById('engineProgressText').style.display = 'none';
+}
 function toggleLilyApiPanel(){
   const panel = document.getElementById('lilyApiPanel');
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('lilyEngineSelect').value = getChosenEngine();
   document.getElementById('lilyApiKeyInput').value = getApiKey();
   document.getElementById('lilyApiModelInput').value = localStorage.getItem('lilaApiModel') || '';
+  document.getElementById('webllmModelSelect').value = getWebLLMModel();
+  showEngineSection();
+}
+function onEngineChange(){
+  localStorage.setItem('lilaEngine', document.getElementById('lilyEngineSelect').value);
+  lilyHistory = []; focusHistory = [];
+  showEngineSection();
+  updateAiStatus();
+}
+async function setupBuiltIn(){
+  const status = document.getElementById('builtinStatus');
+  if(!('LanguageModel' in self)){
+    status.textContent = "This browser doesn't offer the built-in AI. You need a recent desktop Chrome or Edge, and it can't run on phones.";
+    return;
+  }
+  let availability;
+  try{ availability = await LanguageModel.availability(BUILTIN_LANG); }
+  catch(e){ availability = await LanguageModel.availability(); }
+  if(availability === 'unavailable'){
+    status.textContent = "Your browser has the feature, but this device can't run the model (it needs roughly 22 GB of free disk and a GPU with over 4 GB of memory, or 16 GB of RAM). Try the downloadable-model option instead.";
+    return;
+  }
+  try{
+    status.textContent = availability === 'available' ? 'Starting up...' : 'Downloading the model. This can take a few minutes.';
+    showEngineProgress(0);
+    const session = await createBuiltInSession({
+      monitor(m){ m.addEventListener('downloadprogress', e => showEngineProgress(e.loaded)); }
+    });
+    if(typeof session.destroy === 'function') session.destroy();
+    localStorage.setItem('lilaEngine', 'builtin');
+    localStorage.setItem('lilaReady-builtin', '1');
+    status.textContent = 'Ready. Lily now runs on your device.';
+    hideEngineProgress();
+    updateAiStatus();
+    showToast('Lily', 'On-device AI is ready.');
+  }catch(err){
+    hideEngineProgress();
+    status.textContent = "Couldn't set it up (" + err.message + "). Try again, or pick a different engine.";
+  }
+}
+async function setupWebLLM(){
+  const status = document.getElementById('webllmStatus');
+  const model = document.getElementById('webllmModelSelect').value;
+  localStorage.setItem('lilaWebllmModel', model);
+  webllmEngine = null; webllmLoadedModel = '';
+  try{
+    status.textContent = 'Downloading the model. The first time can take several minutes, and it is cached after that.';
+    showEngineProgress(0);
+    await ensureWebLLM((frac, text) => showEngineProgress(frac, text));
+    localStorage.setItem('lilaEngine', 'webllm');
+    localStorage.setItem('lilaReady-webllm', '1');
+    status.textContent = 'Ready. Lily now runs on your graphics card.';
+    hideEngineProgress();
+    updateAiStatus();
+    showToast('Lily', 'On-device model is ready.');
+  }catch(err){
+    hideEngineProgress();
+    status.textContent = "Couldn't load it (" + err.message + "). This needs a browser with WebGPU and enough graphics memory.";
+  }
+}
+async function checkBrowserAI(){
+  const out = document.getElementById('engineCheckResult');
+  const lines = [];
+  if('LanguageModel' in self){
+    try{ lines.push('Built-in AI: ' + (await LanguageModel.availability())); }
+    catch(e){ lines.push('Built-in AI: present, but the check failed (' + e.message + ')'); }
+  } else {
+    lines.push('Built-in AI: not available in this browser');
+  }
+  lines.push('WebGPU (for the downloadable model): ' + (navigator.gpu ? 'available' : 'not available'));
+  out.textContent = lines.join('  |  ');
 }
 function saveLilyApi(){
   const key = document.getElementById('lilyApiKeyInput').value.trim();
   const model = document.getElementById('lilyApiModelInput').value.trim();
   if(!key){ showToast('Lily', 'Paste a key first, or use Remove key.'); return; }
   localStorage.setItem('lilaApiKey', key);
+  localStorage.setItem('lilaEngine', 'api');
   if(model) localStorage.setItem('lilaApiModel', model); else localStorage.removeItem('lilaApiModel');
   lilyHistory = []; focusHistory = [];
   document.getElementById('lilyApiPanel').style.display = 'none';
@@ -2177,18 +2431,51 @@ function saveLilyApi(){
 function clearLilyApi(){
   localStorage.removeItem('lilaApiKey');
   localStorage.removeItem('lilaApiModel');
+  if(getChosenEngine() === 'api') localStorage.setItem('lilaEngine', 'offline');
   lilyHistory = []; focusHistory = [];
   document.getElementById('lilyApiKeyInput').value = '';
   document.getElementById('lilyApiModelInput').value = '';
+  document.getElementById('lilyEngineSelect').value = getChosenEngine();
+  showEngineSection();
   updateAiStatus();
-  showToast('Lily', 'Key removed. Back to offline mode.');
+  showToast('Lily', 'Key removed.');
+}
+async function detectFreeAI(){
+  const hint = document.getElementById('lilyAiHint');
+  if(!hint || aiOn()) return;
+  let suggest = null;
+  if('LanguageModel' in self){
+    try{ if((await LanguageModel.availability()) !== 'unavailable') suggest = 'builtin'; }catch(e){}
+  }
+  if(!suggest && navigator.gpu) suggest = 'webllm';
+  if(!suggest) return;
+  hint.textContent = suggest === 'builtin'
+    ? "Good news: your browser can run a free AI right on this device, no key needed. Tap here to set it up."
+    : "Good news: your browser can run a free downloadable AI on this device, no key needed. Tap here to set it up.";
+  hint.style.cursor = 'pointer';
+  hint.onclick = ()=>{
+    localStorage.setItem('lilaEngine', suggest);
+    const panel = document.getElementById('lilyApiPanel');
+    panel.style.display = 'block';
+    document.getElementById('lilyEngineSelect').value = suggest;
+    showEngineSection();
+  };
 }
 function updateAiStatus(){
-  const on = !!getApiKey();
+  const engine = getEngine();
+  const chosen = getChosenEngine();
+  const labels = {
+    offline:'Offline mode — pre-written replies',
+    builtin:'On-device AI — private and free',
+    webllm:'On-device AI — private and free',
+    api:'Online — real AI'
+  };
+  let text = labels[engine];
+  if(engine === 'offline' && (chosen === 'builtin' || chosen === 'webllm')) text = 'Offline mode — finish setup in ⚙️';
   const status = document.getElementById('lilyStatusText');
-  if(status) status.textContent = on ? 'Online — real AI' : 'Offline mode — pre-written replies';
+  if(status) status.textContent = text;
   const hint = document.getElementById('lilyAiHint');
-  if(hint) hint.style.display = on ? 'none' : 'block';
+  if(hint) hint.style.display = engine === 'offline' ? 'block' : 'none';
 }
 
 /* ============ PROFILE SYSTEM ============ */
@@ -3107,6 +3394,8 @@ renderClock();
 initProfileSystem();
 loadBlobSettings();
 updateAiStatus();
+renderModeSelectors();
+detectFreeAI();
 </script>
 
 <div class="music-bar" id="musicBar">
