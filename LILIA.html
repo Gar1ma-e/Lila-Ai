@@ -1,0 +1,3332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LILAverse</title>
+<style>
+/* ============ THEME TOKENS ============ */
+:root{
+  --bg:#0a0e1a;
+  --accent-1:#8b5cf6;
+  --accent-2:#22d3ee;
+  --accent-3:#ec4899;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+  --glass:rgba(255,255,255,.05);
+  --glass-strong:rgba(255,255,255,.09);
+  --border:rgba(255,255,255,.08);
+  --radius-lg:28px;
+  --radius-md:20px;
+  --radius-sm:14px;
+}
+body[data-theme="ocean"]{
+  --bg:#071019;
+  --accent-1:#0ea5e9;
+  --accent-2:#22d3ee;
+  --accent-3:#2dd4bf;
+}
+body[data-theme="sunset"]{
+  --bg:#160b11;
+  --accent-1:#f97316;
+  --accent-2:#ec4899;
+  --accent-3:#facc15;
+}
+body[data-theme="calm"]{
+  --bg:#0d0b16;
+  --accent-1:#a78bfa;
+  --accent-2:#c4b5fd;
+  --accent-3:#f0abfc;
+}
+body[data-theme="sakura"]{
+  --bg:#160c14;
+  --accent-1:#f9a8d4;
+  --accent-2:#fb7185;
+  --accent-3:#fde68a;
+}
+body[data-theme="forest"]{
+  --bg:#0a120e;
+  --accent-1:#34d399;
+  --accent-2:#84cc16;
+  --accent-3:#facc15;
+}
+body[data-theme="galaxy"]{
+  --bg:#0a0a18;
+  --accent-1:#818cf8;
+  --accent-2:#c084fc;
+  --accent-3:#22d3ee;
+}
+body[data-theme="custom"]{
+  --bg:var(--custom-bg, #0a0e1a);
+  --accent-1:var(--custom-1, #8b5cf6);
+  --accent-2:var(--custom-2, #22d3ee);
+  --accent-3:var(--custom-3, #ec4899);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Inter",-apple-system,"Segoe UI",sans-serif;
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  background:var(--bg);
+  position:relative;
+  transition:background .6s ease;
+}
+::selection{background:var(--accent-1);color:#fff}
+button{font-family:inherit;cursor:pointer}
+textarea, input{font-family:inherit}
+
+/* ============ ANIMATED BLOBS ============ */
+.blob-field{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(70px);
+  will-change:transform;
+  animation-play-state:var(--blob-motion, running);
+}
+.blob-a{width:520px;height:520px;top:-120px;left:-80px;background:var(--accent-1);opacity:calc(.35 * var(--blob-strength, 1));animation:float1 22s ease-in-out infinite}
+.blob-b{width:460px;height:460px;bottom:-140px;right:-100px;background:var(--accent-2);opacity:calc(.35 * var(--blob-strength, 1));animation:float2 26s ease-in-out infinite}
+.blob-c{width:380px;height:380px;bottom:10%;left:38%;background:var(--accent-3);opacity:calc(.22 * var(--blob-strength, 1));animation:float3 30s ease-in-out infinite}
+@keyframes float1{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(60px,80px) scale(1.15)}
+}
+@keyframes float2{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-70px,-50px) scale(1.1)}
+}
+@keyframes float3{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-40px,40px) scale(1.2)}
+}
+@media (prefers-reduced-motion: reduce){
+  .blob{animation:none}
+}
+
+/* ============ LAYOUT ============ */
+.app{position:relative;z-index:1;min-height:100vh}
+
+/* Floating glass sidebar */
+.sidebar{
+  position:fixed;
+  top:18px;left:18px;bottom:18px;
+  width:230px;
+  padding:22px 16px;
+  display:flex;
+  flex-direction:column;
+  background:var(--glass);
+  backdrop-filter:blur(28px);
+  -webkit-backdrop-filter:blur(28px);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.35);
+  z-index:20;
+  overflow:hidden;
+}
+.logo{font-size:1.6rem;font-weight:800;padding:0 8px;letter-spacing:-.02em;flex-shrink:0}
+.logo span{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.sidebar-scroll{flex:1;overflow-y:auto;min-height:0;margin:0 -4px;padding:0 4px}
+.sidebar-scroll::-webkit-scrollbar{width:5px}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:var(--glass-strong);border-radius:99px}
+
+.nav{margin-top:22px;display:flex;flex-direction:column;gap:2px}
+.nav a{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 12px;
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  text-decoration:none;
+  font-size:.94rem;
+  transition:background .2s ease, transform .2s ease;
+}
+.nav a:hover{background:var(--glass-strong);transform:translateX(2px)}
+.nav a.active{background:var(--glass-strong);box-shadow:inset 0 0 0 1px var(--border)}
+
+.recent{margin-top:20px;font-size:.78rem;color:var(--muted);padding:0 8px}
+.recent strong{display:block;margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;font-size:.68rem}
+.recent div{margin-top:8px;font-size:.85rem;color:#cbd5e1;cursor:pointer}
+.recent div:hover{color:var(--text)}
+
+.lily-mini{
+  flex-shrink:0;
+  margin-top:14px;
+  padding:14px;
+  border-radius:var(--radius-md);
+  background:linear-gradient(135deg, rgba(139,92,246,.18), rgba(34,211,238,.10));
+  border:1px solid var(--border);
+}
+.lily-mini .row{display:flex;align-items:center;gap:8px;font-weight:700}
+.lily-status{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+.lily-mini p{margin-top:6px;color:var(--muted);font-size:.82rem}
+.lily-mini button{
+  margin-top:10px;width:100%;padding:10px 12px;border:none;border-radius:12px;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-weight:600;font-size:.85rem;
+}
+
+/* Main content */
+.main-wrap{margin-left:266px;padding:0 30px 100px;position:relative;z-index:1}
+.main{width:100%;max-width:1300px;margin:0 auto;padding-top:26px}
+
+.topbar{display:flex;gap:14px;align-items:center}
+.search{
+  flex:1;
+  padding:16px 22px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--glass);
+  backdrop-filter:blur(20px);
+  color:var(--text);
+  outline:none;
+  font-size:.95rem;
+}
+.search::placeholder{color:var(--muted)}
+.theme-launch-btn{
+  display:flex;align-items:center;gap:9px;flex-shrink:0;
+  padding:13px 20px;border-radius:999px;
+  border:1px solid var(--border);background:var(--glass);
+  backdrop-filter:blur(20px);color:var(--text);
+  font-size:.88rem;font-weight:600;cursor:pointer;
+  transition:background .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.theme-launch-btn:hover{background:var(--glass-strong);transform:translateY(-1px);box-shadow:0 10px 26px -12px var(--accent-1)}
+.theme-launch-dot{
+  width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent-1),var(--accent-2),var(--accent-3));
+  box-shadow:0 0 10px -1px var(--accent-1);
+}
+
+.hero{padding:56px 0 10px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.hero h1{font-size:56px;line-height:1.06;font-weight:800;letter-spacing:-.02em}
+.hero p{margin-top:14px;color:#cbd5e1;font-size:19px;max-width:620px}
+.hero .cta{
+  margin-top:26px;display:inline-block;padding:15px 26px;border:none;border-radius:16px;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-weight:700;font-size:.95rem;
+  box-shadow:0 12px 30px -8px var(--accent-1);
+}
+.hero .vibe{justify-content:center}
+#greetName{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.vibe{margin-top:26px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;color:#dbeafe}
+.pill{padding:10px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--border);font-size:.85rem;cursor:pointer;transition:background .2s}
+.pill:hover{background:var(--glass-strong)}
+.pill.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border-color:transparent}
+
+.section{margin-top:48px}
+.section h2{font-size:1.3rem;font-weight:700;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{
+  padding:20px;border-radius:var(--radius-md);
+  background:var(--glass);border:1px solid var(--border);
+  backdrop-filter:blur(20px);transition:transform .25s ease, background .25s ease;
+}
+.card:hover{transform:translateY(-4px);background:var(--glass-strong)}
+.card .ico{font-size:1.5rem;margin-bottom:8px;display:block}
+.card small{color:var(--muted);display:block;margin-top:4px}
+
+.focusBtn{
+  position:fixed;right:30px;bottom:30px;border:none;border-radius:999px;padding:15px 22px;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-weight:700;
+  box-shadow:0 14px 34px -10px var(--accent-1);z-index:30;
+}
+
+/* ============ LILY COMPANION (floating avatar + chat) ============ */
+/* ============ LILY CHAT — full AI-app style ============ */
+.lily-fab{
+  position:fixed;right:30px;bottom:96px;width:58px;height:58px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, var(--accent-2), var(--accent-1));
+  border:none;box-shadow:0 10px 30px -6px var(--accent-1);z-index:40;
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+  transition:transform .2s;
+}
+.lily-fab:hover{transform:translateY(-3px) scale(1.05)}
+.lily-modal-backdrop{
+  position:fixed;inset:0;background:rgba(4,6,12,.62);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:70;
+}
+.lily-modal-backdrop.active{display:flex}
+.lily-modal{
+  width:min(760px,94vw);height:min(720px,88vh);
+  display:flex;flex-direction:column;overflow:hidden;
+  background:rgba(9,12,22,.94);border:1px solid var(--border);border-radius:28px;
+  box-shadow:0 40px 100px rgba(0,0,0,.55);backdrop-filter:blur(30px);
+}
+.lily-modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.lily-modal-head .who{display:flex;align-items:center;gap:10px}
+.lily-avatar-lg{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:radial-gradient(circle at 30% 30%, var(--accent-2), var(--accent-1));
+  display:flex;align-items:center;justify-content:center;font-size:1rem;
+  box-shadow:0 6px 18px -6px var(--accent-1);
+}
+.lily-modal-head .who-text strong{display:block;font-size:1rem}
+.lily-modal-head .who-text small{color:var(--muted);display:flex;align-items:center;gap:5px;font-size:.75rem}
+.lily-modal-head .x{color:var(--muted);cursor:pointer;font-size:1.4rem;line-height:1;padding:4px}
+.lily-head-actions{display:flex;align-items:center;gap:6px}
+.lily-gear{cursor:pointer;font-size:1.05rem;padding:4px;opacity:.75;transition:opacity .2s}
+.lily-gear:hover{opacity:1}
+.lily-api-panel{padding:14px 22px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.18);font-size:.8rem;color:var(--muted);line-height:1.5;flex-shrink:0}
+.lily-api-panel input{width:100%;margin-top:8px;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);outline:none;font-size:.85rem}
+.lily-api-panel input:focus{border-color:var(--accent-2)}
+.lily-api-actions{display:flex;gap:8px;margin-top:10px}
+.lily-api-note{margin-top:10px;font-size:.72rem}
+.lily-ai-hint{margin-top:8px;font-size:.78rem;color:var(--accent-2)}
+.lily-modal-body{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.lily-empty{margin:auto;text-align:center;color:var(--muted);max-width:420px}
+.lily-empty .big{font-size:2.6rem;margin-bottom:12px}
+.lily-empty h4{color:var(--text);font-size:1.15rem;margin-bottom:6px}
+.lily-suggestions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:20px}
+.lily-suggest-chip{
+  padding:10px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--border);
+  font-size:.83rem;cursor:pointer;color:var(--text);transition:background .2s;
+}
+.lily-suggest-chip:hover{background:var(--glass-strong)}
+.lily-modal-msg{max-width:74%;padding:12px 16px;border-radius:18px;background:var(--glass);font-size:.95rem;line-height:1.55;border:1px solid var(--border)}
+.lily-modal-msg.me{align-self:flex-end;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border:none;border-bottom-right-radius:6px}
+.lily-modal-msg.her{align-self:flex-start;border-bottom-left-radius:6px}
+.lily-typing{align-self:flex-start;display:flex;gap:4px;padding:14px 16px;background:var(--glass);border-radius:18px;border-bottom-left-radius:6px;border:1px solid var(--border)}
+.lily-typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:typingBounce 1.2s infinite}
+.lily-typing span:nth-child(2){animation-delay:.15s}
+.lily-typing span:nth-child(3){animation-delay:.3s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.lily-modal-input-row{display:flex;gap:10px;align-items:flex-end;padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0}
+.lily-modal-input{
+  flex:1;background:var(--glass);border:1px solid var(--border);border-radius:20px;
+  padding:13px 16px;color:var(--text);resize:none;max-height:140px;font-size:.95rem;outline:none;
+  font-family:inherit;line-height:1.4;
+}
+.lily-modal-input::placeholder{color:var(--muted)}
+.lily-send-btn{
+  width:46px;height:46px;border-radius:50%;border:none;flex-shrink:0;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-size:1.15rem;
+  display:flex;align-items:center;justify-content:center;
+}
+@media (max-width:640px){
+  .lily-modal{height:100vh;width:100vw;border-radius:0}
+}
+
+/* ============ DASHBOARD (Journal / Diary / Life Space unified) ============ */
+.dash-backdrop{
+  position:fixed;inset:0;background:rgba(4,6,12,.55);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:50;
+}
+.dash-backdrop.active{display:flex}
+.dashboard{
+  width:min(880px,92vw);max-height:86vh;overflow:hidden;display:flex;flex-direction:column;
+  background:rgba(12,16,28,.88);border:1px solid var(--border);border-radius:32px;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(30px);
+}
+.dash-head{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 0}
+.dash-subtitle{color:var(--muted);font-size:.8rem;margin-top:4px}
+.entry-list-label{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:16px;margin-bottom:8px}
+.dash-head h2{font-size:1.3rem}
+.dash-head .x{color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1}
+.tabs{display:flex;gap:8px;padding:18px 26px 0}
+.tab{
+  padding:9px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--border);
+  color:var(--muted);font-size:.85rem;font-weight:600;
+}
+.tab.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border-color:transparent}
+.tab-panels{padding:20px 26px 26px;overflow-y:auto;flex:1;min-height:0}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.prompt-line{color:#cbd5e1;margin-bottom:14px;font-size:.95rem}
+.mood-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.mood-orb{
+  width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--glass);border:1px solid var(--border);font-size:1.2rem;transition:transform .2s, background .2s;
+}
+.mood-orb:hover{transform:translateY(-3px)}
+.mood-orb.selected{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));box-shadow:0 8px 20px -6px var(--accent-1)}
+.entry-box{
+  width:100%;min-height:180px;background:var(--glass);border:1px solid var(--border);border-radius:18px;
+  padding:16px;color:var(--text);outline:none;resize:vertical;font-size:15px;line-height:1.7;
+}
+.entry-box::placeholder{color:var(--muted)}
+.dash-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.saveBtn{
+  padding:11px 20px;border:none;border-radius:14px;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+  color:#fff;font-weight:700;font-size:.85rem;
+}
+.saved-note{color:var(--muted);font-size:.8rem;opacity:0;transition:opacity .3s}
+.saved-note.show{opacity:1}
+.entry-list{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+.entry-pill{padding:9px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--border);font-size:.8rem;color:#dbeafe}
+
+/* ============ THEME STUDIO ============ */
+.studio-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:22px}
+.preset-swatch{
+  border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;
+  border:1px solid var(--border);background:var(--glass);font-size:.82rem;font-weight:600;
+  transition:transform .2s, box-shadow .2s;
+}
+.preset-swatch:hover{transform:translateY(-3px)}
+.preset-swatch.active{box-shadow:0 0 0 2px var(--accent-2)}
+.preset-dots{display:flex;justify-content:center;gap:4px;margin-bottom:8px}
+.preset-dots span{width:16px;height:16px;border-radius:50%;display:inline-block}
+.studio-divider{border:none;border-top:1px solid var(--border);margin:22px 0}
+
+.ai-generate-panel{
+  padding:18px;border-radius:20px;
+  background:linear-gradient(160deg, rgba(139,92,246,.10), rgba(34,211,238,.06));
+  border:1px solid var(--border);
+}
+.ai-seed-input{
+  width:100%;background:rgba(0,0,0,.18);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;color:var(--text);outline:none;font-size:.9rem;margin-bottom:12px;
+  transition:border-color .2s, box-shadow .2s;
+}
+.ai-seed-input:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+.ai-seed-input::placeholder{color:var(--muted)}
+.ai-generate-btn{
+  width:100%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:none;border-radius:16px;padding:15px 20px;cursor:pointer;
+  font-weight:800;font-size:.95rem;color:#fff;letter-spacing:.01em;
+  background:linear-gradient(120deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+  background-size:300% 100%;
+  animation:shimmerMove 5s ease infinite;
+  box-shadow:0 16px 36px -12px var(--accent-1);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.ai-generate-btn:hover{transform:translateY(-2px);box-shadow:0 20px 44px -12px var(--accent-1)}
+.ai-generate-btn:active{transform:translateY(0) scale(.98)}
+.ai-generate-sparkle{display:inline-block;animation:sparklePulse 1.8s ease-in-out infinite}
+@keyframes shimmerMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+@keyframes sparklePulse{
+  0%,100%{transform:scale(1) rotate(0deg)}
+  50%{transform:scale(1.25) rotate(15deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  .ai-generate-btn{animation:none}
+  .ai-generate-sparkle{animation:none}
+}
+
+.studio-preview{
+  margin-top:16px;padding:20px;border-radius:16px;
+  background:var(--glass);
+  display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted);
+  font-size:.88rem;text-align:center;transition:background .3s, box-shadow .3s;
+}
+.studio-actions{display:flex;gap:10px;margin-top:16px}
+.ghostBtn{
+  padding:11px 18px;border-radius:14px;border:1px solid var(--border);background:var(--glass);
+  color:var(--text);font-weight:600;font-size:.85rem;
+}
+.ghostBtn.active-toggle{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border-color:transparent}
+
+.gradient-controls .studio-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.gradient-controls label{font-size:.85rem;color:#cbd5e1}
+.gradient-controls input[type="range"]{
+  width:150px;accent-color:var(--accent-2);cursor:pointer;
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-wrap{padding:60px 20px 40px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.empty-ring{
+  width:96px;height:96px;border-radius:50%;position:relative;margin-bottom:22px;
+  display:flex;align-items:center;justify-content:center;font-size:2.2rem;
+  background:var(--glass);border:1px solid var(--border);
+}
+.empty-ring::before{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:2px dashed var(--accent-2);opacity:.5;animation:spin 6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-title{font-size:1.15rem;font-weight:800;letter-spacing:.02em;margin-bottom:8px}
+.empty-sub{color:var(--muted);font-size:.92rem}
+.empty-dots::after{
+  content:'';display:inline-block;width:1em;text-align:left;
+  animation:dots 1.4s steps(4,end) infinite;
+}
+@keyframes dots{
+  0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''}
+}
+
+/* ============ ONBOARDING TOUR ============ */
+.onb-slide{display:none;text-align:center;padding:10px 6px 4px}
+.onb-slide.active{display:block}
+.onb-ico{font-size:3rem;margin-bottom:16px}
+.onb-slide h3{font-size:1.4rem;margin-bottom:10px}
+.onb-slide p{color:#cbd5e1;font-size:.98rem;line-height:1.6;max-width:480px;margin:0 auto}
+.onb-progress{display:flex;justify-content:center;gap:6px;margin:26px 0 6px}
+.onb-dot{width:8px;height:8px;border-radius:50%;background:var(--glass-strong)}
+.onb-dot.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));width:22px;border-radius:999px;transition:width .3s}
+.onb-actions{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+.onb-skip{color:var(--muted);font-size:.85rem;background:none;border:none}
+
+/* Toast feedback for clicks */
+.toast{
+  position:fixed;left:50%;bottom:30px;transform:translate(-50%,140%);
+  background:rgba(12,16,28,.94);border:1px solid var(--border);border-radius:16px;
+  padding:14px 20px;box-shadow:0 20px 50px rgba(0,0,0,.4);z-index:60;
+  transition:transform .35s ease;max-width:360px;font-size:.9rem;
+}
+.toast strong{color:var(--accent-2)}
+.toast.show{transform:translate(-50%,0)}
+.ai-disclaimer{text-align:center;color:var(--muted);font-size:.72rem;padding:0 20px 14px}
+
+/* ============ SPLIT ROOM (Writing Studio + Research Space) ============ */
+.split-backdrop{
+  position:fixed;inset:0;background:rgba(4,6,12,.65);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:75;
+}
+.split-backdrop.active{display:flex}
+.split-room{
+  width:min(1100px,96vw);height:min(720px,92vh);display:flex;overflow:hidden;
+  background:rgba(9,12,22,.94);border:1px solid var(--border);border-radius:28px;
+  box-shadow:0 40px 100px rgba(0,0,0,.55);backdrop-filter:blur(30px);
+}
+.split-list{width:230px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.split-list-head{padding:16px 16px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.split-list-head h3{font-size:.95rem}
+.split-list-head .x{color:var(--muted);cursor:pointer;font-size:1.2rem}
+.split-newbtn{margin:0 16px 12px;padding:9px;border-radius:12px;border:1px dashed var(--border);background:var(--glass);color:var(--muted);font-size:.82rem;text-align:center;flex-shrink:0}
+.split-items{flex:1;overflow-y:auto;padding:0 12px 12px;min-height:0}
+.split-item{
+  padding:10px 12px;border-radius:12px;font-size:.85rem;cursor:pointer;margin-bottom:4px;
+  display:flex;justify-content:space-between;align-items:center;gap:6px;
+}
+.split-item:hover{background:var(--glass)}
+.split-item.active{background:var(--glass-strong);box-shadow:inset 0 0 0 1px var(--border)}
+.split-item .del{color:var(--muted);opacity:0;font-size:.75rem}
+.split-item:hover .del{opacity:1}
+.split-sub-list{padding-left:6px;margin-top:2px;margin-bottom:8px}
+.split-sub-item{padding:7px 10px;border-radius:10px;font-size:.8rem;color:var(--muted);cursor:pointer;display:flex;justify-content:space-between}
+.split-sub-item:hover{background:var(--glass)}
+.split-sub-item.active{color:var(--text);background:var(--glass-strong)}
+.split-editor{flex:1;display:flex;flex-direction:column;min-width:0}
+.split-editor-head{padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.split-editor-head input{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-size:1.2rem;font-weight:700}
+.split-editor-body{flex:1;overflow-y:auto;padding:18px 22px;min-height:0;display:flex;flex-direction:column;gap:16px}
+.split-editor-foot{padding:12px 22px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.split-wordcount{color:var(--muted);font-size:.8rem}
+.section-block label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px}
+.section-block textarea{
+  width:100%;min-height:120px;background:var(--glass);border:1px solid var(--border);border-radius:14px;
+  padding:12px 14px;color:var(--text);outline:none;resize:vertical;font-size:.92rem;line-height:1.6;
+}
+.split-empty{margin:auto;text-align:center;color:var(--muted);padding:40px}
+
+/* ============ COMMUNITY ============ */
+.community-compose{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--border)}
+.community-compose input, .community-compose textarea{
+  background:transparent;border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);outline:none;font-size:.88rem;
+}
+.community-compose textarea{min-height:60px;resize:vertical}
+.community-compose-row{display:flex;gap:8px}
+.community-compose-row select{padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-size:.82rem}
+.post-card{border:1px solid var(--border);background:var(--glass);border-radius:16px;padding:16px;margin-bottom:12px}
+.post-tag{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--glass-strong);font-size:.7rem;color:var(--accent-2);margin-bottom:8px}
+.post-title{font-weight:700;font-size:1rem;margin-bottom:4px}
+.post-body{color:#cbd5e1;font-size:.88rem;line-height:1.5;margin-bottom:10px}
+.post-meta{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:.78rem}
+.vote-group{display:flex;align-items:center;gap:6px}
+.vote-btn{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer;padding:2px 4px}
+.vote-btn.voted-up{color:#34d399}
+.vote-btn.voted-down{color:#f87171}
+.comment-toggle{cursor:pointer}
+.comment-toggle:hover{color:var(--text)}
+.comments-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:none}
+.comments-box.open{display:block}
+.comment-row{display:flex;gap:8px;margin-bottom:10px}
+.comment-row input{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);outline:none;font-size:.82rem}
+.comment-item{font-size:.82rem;color:#cbd5e1;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.comment-item strong{color:var(--text)}
+
+/* ============ GAMES HUB ============ */
+.games-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.game-card{
+  padding:20px;border-radius:18px;background:var(--glass);border:1px solid var(--border);cursor:pointer;
+  transition:transform .2s, background .2s;
+}
+.game-card:hover{transform:translateY(-4px);background:var(--glass-strong)}
+.game-card .ico{font-size:1.8rem;display:block;margin-bottom:8px}
+.game-card small{color:var(--muted);display:block;margin-top:4px}
+.game-back{color:var(--muted);cursor:pointer;font-size:.85rem;margin-bottom:14px;display:inline-block}
+.game-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.65rem;font-weight:700;letter-spacing:.03em;margin-top:6px}
+.game-badge.solo{background:rgba(34,211,238,.15);color:#67e8f9}
+.game-badge.two-player{background:rgba(236,72,153,.15);color:#f9a8d4}
+
+/* Tic-Tac-Toe */
+.ttt-status{text-align:center;margin-bottom:16px;font-size:.95rem;font-weight:700;color:var(--muted)}
+.ttt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:270px;margin:0 auto 18px}
+.ttt-cell{
+  aspect-ratio:1;border-radius:14px;background:var(--glass);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:800;cursor:pointer;user-select:none;
+  transition:background .2s;
+}
+.ttt-cell:hover:not(.filled){background:var(--glass-strong)}
+.ttt-cell.x-mark{color:var(--accent-2)}
+.ttt-cell.o-mark{color:var(--accent-3)}
+.ttt-cell.win-cell{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff}
+.ttt-score{display:flex;justify-content:center;gap:20px;font-size:.82rem;color:var(--muted);margin-top:12px}
+.ttt-score span strong{color:var(--text)}
+
+/* Reaction Test */
+.reaction-box{
+  max-width:320px;margin:10px auto;aspect-ratio:16/10;border-radius:20px;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;
+  font-weight:700;font-size:1.1rem;cursor:pointer;user-select:none;transition:background .15s;
+  background:var(--glass);border:1px solid var(--border);color:var(--muted);
+}
+.reaction-box.waiting{background:rgba(248,113,113,.15);color:#fca5a5}
+.reaction-box.go{background:#22c55e;color:#fff}
+.reaction-result{text-align:center;margin-top:14px;color:var(--accent-2);font-weight:700;min-height:1.4em}
+.reaction-best{text-align:center;color:var(--muted);font-size:.8rem}
+
+/* Quick Math */
+.math-timer{text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:10px}
+.math-problem{text-align:center;font-size:2.2rem;font-weight:800;margin-bottom:18px}
+.math-input-row{display:flex;gap:8px;max-width:220px;margin:0 auto}
+.math-input-row input{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;text-align:center;font-size:1.1rem}
+.math-score{text-align:center;margin-top:16px;color:var(--muted);font-size:.9rem}
+.math-final{text-align:center}
+.math-final .big-score{font-size:2.6rem;font-weight:800;color:var(--accent-2);margin:10px 0}
+
+/* Memory Match */
+.memory-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:.88rem;color:var(--muted)}
+.memory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:420px;margin:0 auto}
+.memory-card{
+  aspect-ratio:1;border-radius:14px;background:var(--glass);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:1.7rem;cursor:pointer;
+  transition:transform .25s, background .2s;user-select:none;
+}
+.memory-card.flipped, .memory-card.matched{background:linear-gradient(135deg,var(--accent-1),var(--accent-2))}
+.memory-card.matched{opacity:.55;cursor:default}
+.memory-win{text-align:center;margin-top:16px;color:var(--accent-2);font-weight:700;display:none}
+.memory-win.show{display:block}
+
+/* Word Guess */
+.wg-grid{display:grid;grid-template-rows:repeat(6,1fr);gap:6px;max-width:280px;margin:0 auto 18px}
+.wg-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.wg-cell{
+  aspect-ratio:1;border-radius:8px;border:1px solid var(--border);background:var(--glass);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;text-transform:uppercase;
+}
+.wg-cell.correct{background:#22c55e;border-color:#22c55e;color:#fff}
+.wg-cell.present{background:#eab308;border-color:#eab308;color:#fff}
+.wg-cell.absent{background:rgba(255,255,255,.08);color:var(--muted)}
+.wg-input-row{display:flex;gap:8px;max-width:280px;margin:0 auto}
+.wg-input-row input{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;text-transform:uppercase;text-align:center;font-size:1rem;letter-spacing:.15em}
+.wg-msg{text-align:center;margin-top:14px;color:var(--accent-2);font-weight:700;min-height:1.4em}
+
+/* ============ MOOD BOARD ============ */
+.moodboard-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.moodboard-add-row select{
+  padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--glass);color:var(--text);font-size:.85rem;
+}
+.moodboard-add-row input{flex:1;min-width:160px;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;font-size:.85rem}
+.moodboard-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;
+}
+.mb-item{
+  position:relative;border-radius:16px;overflow:hidden;background:var(--glass);border:1px solid var(--border);
+  min-height:130px;display:flex;flex-direction:column;justify-content:flex-end;padding:10px;font-size:.82rem;
+}
+.mb-item.mb-image{background-size:cover;background-position:center;justify-content:flex-end}
+.mb-item.mb-image .mb-label{background:rgba(0,0,0,.55);border-radius:8px;padding:4px 8px;align-self:flex-start}
+.mb-item.mb-quote{font-style:italic;color:#e2e8f0;justify-content:center;text-align:center;padding:16px}
+.mb-item.mb-song{background:linear-gradient(135deg, rgba(139,92,246,.18), rgba(34,211,238,.10))}
+.mb-item.mb-goal{background:linear-gradient(135deg, rgba(52,211,153,.15), rgba(250,204,21,.08))}
+.mb-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:.75rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mb-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px 10px;font-size:.88rem}
+
+/* ============ MUSIC PLAYER ============ */
+.music-bar{
+  position:fixed;left:266px;right:30px;bottom:18px;max-width:640px;margin:0 auto;
+  display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:999px;
+  background:rgba(9,12,22,.9);border:1px solid var(--border);backdrop-filter:blur(24px);
+  box-shadow:0 20px 50px rgba(0,0,0,.4);z-index:35;transform:translateY(140%);transition:transform .3s ease;
+}
+.music-bar.active{transform:translateY(0)}
+.music-bar button.mp-play{
+  width:38px;height:38px;border-radius:50%;border:none;flex-shrink:0;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-size:1rem;
+}
+.mp-info{flex:1;min-width:0}
+.mp-info .title{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-info .sub{font-size:.72rem;color:var(--muted)}
+.mp-vol{width:70px;accent-color:var(--accent-2)}
+.mp-close{color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px}
+.music-panel-row{display:flex;gap:8px;margin-bottom:10px}
+.music-panel-row input{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;font-size:.85rem}
+.music-presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.music-preset-chip{padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--border);font-size:.8rem;cursor:pointer}
+.music-preset-chip:hover{background:var(--glass-strong)}
+
+/* ============ PROFILE LOGIN ============ */
+.profile-backdrop{
+  position:fixed;inset:0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(139,92,246,.20), transparent 45%),
+    radial-gradient(circle at 80% 75%, rgba(34,211,238,.16), transparent 45%),
+    rgba(4,6,12,.85);
+  backdrop-filter:blur(10px);
+  display:none;align-items:center;justify-content:center;z-index:90;
+}
+.profile-backdrop.active{display:flex}
+.profile-card-wrap{position:relative;animation:profileEntrance .5s cubic-bezier(.2,.9,.3,1.3)}
+.profile-card-wrap::before{
+  content:'';position:absolute;inset:-60px;z-index:-1;
+  background:radial-gradient(circle, var(--accent-1), transparent 65%);
+  opacity:.28;filter:blur(50px);
+  animation:profileGlowPulse 4s ease-in-out infinite;
+}
+@keyframes profileEntrance{
+  0%{opacity:0;transform:translateY(18px) scale(.96)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes profileGlowPulse{
+  0%,100%{opacity:.22;transform:scale(1)}
+  50%{opacity:.36;transform:scale(1.08)}
+}
+@media (prefers-reduced-motion: reduce){
+  .profile-card-wrap{animation:none}
+  .profile-card-wrap::before{animation:none}
+}
+.profile-card{
+  position:relative;width:min(400px,92vw);padding:40px 32px 32px;border-radius:30px;
+  background:linear-gradient(165deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), rgba(9,12,22,.96);
+  border:1px solid var(--border);text-align:center;
+  box-shadow:0 40px 100px rgba(0,0,0,.55);
+}
+.profile-orb{
+  width:64px;height:64px;margin:0 auto 18px;border-radius:50%;
+  background:radial-gradient(circle at 32% 30%, var(--accent-2), var(--accent-1) 70%);
+  display:flex;align-items:center;justify-content:center;font-size:1.7rem;
+  box-shadow:0 0 0 6px rgba(255,255,255,.04), 0 14px 34px -8px var(--accent-1);
+  animation:profileOrbPulse 3s ease-in-out infinite;
+}
+@keyframes profileOrbPulse{
+  0%,100%{box-shadow:0 0 0 6px rgba(255,255,255,.04), 0 14px 34px -8px var(--accent-1)}
+  50%{box-shadow:0 0 0 10px rgba(255,255,255,.02), 0 18px 42px -8px var(--accent-2)}
+}
+.profile-wordmark{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.profile-wordmark span{background:linear-gradient(90deg,var(--accent-1),var(--accent-2),var(--accent-3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.profile-card p{color:var(--muted);font-size:.88rem;margin-bottom:22px;line-height:1.5}
+.profile-card input{
+  width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--border);
+  background:rgba(0,0,0,.2);color:var(--text);outline:none;font-size:.95rem;margin-bottom:14px;
+  text-align:center;font-weight:600;transition:border-color .2s, box-shadow .2s;
+}
+.profile-card input:focus{border-color:var(--accent-2);box-shadow:0 0 0 4px rgba(34,211,238,.15)}
+.profile-card input::placeholder{color:var(--muted);font-weight:400}
+.profile-card .cta{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;border:none;border-radius:16px;padding:15px 20px;cursor:pointer;
+  font-weight:800;font-size:.98rem;color:#fff;letter-spacing:.01em;
+  background:linear-gradient(120deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+  background-size:300% 100%;
+  animation:shimmerMove 5s ease infinite;
+  box-shadow:0 16px 36px -12px var(--accent-1);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.profile-card .cta:hover{transform:translateY(-2px);box-shadow:0 20px 44px -12px var(--accent-1)}
+.profile-card .cta:active{transform:translateY(0) scale(.98)}
+@media (prefers-reduced-motion: reduce){
+  .profile-card .cta{animation:none}
+}
+.profile-divider{display:flex;align-items:center;gap:10px;margin:20px 0 12px;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.profile-divider::before,.profile-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.profile-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+.profile-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--border);cursor:pointer;margin-top:16px;transition:background .2s;flex-shrink:0}
+.profile-chip:hover{background:var(--glass-strong)}
+.profile-chip .info small{display:block;color:var(--muted);font-size:.72rem}
+
+/* ============ FOCUS ROOM (study workspace) ============ */
+.focus-backdrop{
+  position:fixed;inset:0;background:rgba(4,6,12,.65);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:75;
+}
+.focus-backdrop.active{display:flex}
+.focus-room{
+  width:min(1180px,96vw);height:min(760px,92vh);display:flex;overflow:hidden;
+  background:rgba(9,12,22,.94);border:1px solid var(--border);border-radius:28px;
+  box-shadow:0 40px 100px rgba(0,0,0,.55);backdrop-filter:blur(30px);
+}
+.focus-main{flex:1.4;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
+.focus-side{flex:1;display:flex;flex-direction:column;min-width:0}
+.focus-head{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.focus-head h3{font-size:1.05rem}
+.focus-head .x{color:var(--muted);cursor:pointer;font-size:1.3rem}
+.focus-timer{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.focus-timer .clock{font-size:2.1rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.focus-timer .modebtn{padding:7px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--border);font-size:.78rem;color:var(--muted)}
+.focus-timer .modebtn.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border-color:transparent}
+.focus-timer .ctrl{margin-left:auto;display:flex;gap:8px}
+.focus-timer .ctrl button{padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--glass);color:var(--text);font-size:.85rem}
+.focus-timer-settings{display:flex;gap:20px;padding:12px 22px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(0,0,0,.15)}
+.focus-timer-settings label{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.focus-timer-settings input{
+  width:56px;background:var(--glass);border:1px solid var(--border);border-radius:10px;
+  padding:6px 8px;color:var(--text);outline:none;text-align:center;font-size:.9rem;
+}
+.focus-timer-settings input:focus{border-color:var(--accent-2)}
+
+.upload-zone{
+  margin:18px 22px 0;padding:22px;border-radius:18px;border:1.5px dashed var(--border);
+  text-align:center;color:var(--muted);font-size:.85rem;cursor:pointer;transition:background .2s, border-color .2s;
+}
+.upload-zone:hover{background:var(--glass);border-color:var(--accent-2)}
+.upload-zone .ico{font-size:1.6rem;display:block;margin-bottom:6px}
+.upload-list{padding:0 22px;display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.upload-chip{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;
+  background:var(--glass);border:1px solid var(--border);font-size:.85rem;
+}
+.upload-chip .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-chip .remove{color:var(--muted);cursor:pointer;font-size:1rem}
+
+.focus-notes{flex:1;display:flex;flex-direction:column;padding:16px 22px 20px;min-height:0}
+.focus-notes label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:block}
+.focus-notes-box{
+  flex:1;width:100%;background:var(--glass);border:1px solid var(--border);border-radius:16px;
+  padding:14px;color:var(--text);outline:none;resize:none;font-size:.92rem;line-height:1.6;min-height:0;
+}
+.focus-notes-box::placeholder{color:var(--muted)}
+
+.focus-tasks{padding:16px 22px;border-top:1px solid var(--border);flex-shrink:0}
+.task-row{display:flex;gap:8px;margin-bottom:10px}
+.task-row input[type="text"]{
+  flex:1;background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  padding:9px 12px;color:var(--text);outline:none;font-size:.85rem;
+}
+.task-add{padding:9px 14px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;font-size:.85rem}
+.task-list{display:flex;flex-direction:column;gap:6px;max-height:110px;overflow-y:auto}
+.task-item{display:flex;align-items:center;gap:8px;font-size:.86rem;padding:6px 4px}
+.task-item.done{opacity:.5;text-decoration:line-through}
+.task-item input[type="checkbox"]{accent-color:var(--accent-2)}
+
+.focus-side .lily-modal-head{border-bottom:1px solid var(--border)}
+.focus-side .lily-modal-body{padding:18px 20px}
+
+.resource-card{
+  border:1px solid var(--border);background:var(--glass);border-radius:14px;padding:12px 14px;
+  font-size:.85rem;line-height:1.5;
+}
+.resource-card strong{display:block;margin-bottom:3px;font-size:.9rem}
+.resource-card small{color:var(--muted)}
+
+#focusBtn.active{background:linear-gradient(90deg,var(--accent-3),var(--accent-1))}
+
+@media (max-width:900px){
+  .focus-room{flex-direction:column;height:94vh}
+  .focus-main{border-right:none;border-bottom:1px solid var(--border)}
+  .split-room{flex-direction:column;height:94vh}
+  .split-list{width:100%;max-height:180px;border-right:none;border-bottom:1px solid var(--border)}
+  .memory-grid{grid-template-columns:repeat(3,1fr);max-width:300px}
+  .games-grid{grid-template-columns:1fr}
+}
+
+@media (max-width:900px){
+  .sidebar{display:none}
+  .main-wrap{margin-left:0;padding:0 20px 100px}
+  .music-bar{left:20px;right:20px;max-width:none}
+}
+</style>
+</head>
+<body data-theme="cyberpunk">
+
+<div class="blob-field">
+  <div class="blob blob-a"></div>
+  <div class="blob blob-b"></div>
+  <div class="blob blob-c"></div>
+</div>
+
+<div class="profile-backdrop" id="profileBackdrop">
+  <div class="profile-card-wrap">
+    <div class="profile-card">
+      <div class="profile-orb">💜</div>
+      <div class="profile-wordmark">LILA<span>verse</span></div>
+      <p>What should we call you? This saves your journals, moods, and progress on this device.</p>
+      <input type="text" id="profileNameInput" placeholder="Your name" onkeydown="if(event.key==='Enter')createProfile()">
+      <button class="cta" onclick="createProfile()">✨ Continue</button>
+      <div id="existingProfiles" style="margin-top:6px;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- Floating glass sidebar -->
+  <div class="sidebar">
+    <div class="logo">LILA<span>verse</span></div>
+
+    <div class="profile-chip" id="profileChip" onclick="openProfileSwitcher()">
+      <div class="profile-avatar" id="profileAvatarInitial">?</div>
+      <div class="info"><strong id="profileChipName">Guest</strong><small>Tap to switch profile</small></div>
+    </div>
+
+    <div class="sidebar-scroll">
+      <div class="nav" id="mainNav">
+        <a href="#" class="active" data-section="home" onclick="goSection(this,'home');return false;">🏠 Home</a>
+        <a href="#" onclick="openEmptyState('Library','📚');return false;">📚 Library</a>
+        <a href="#" onclick="openEmptyState('Anime','🎌');return false;">🎌 Anime</a>
+        <a href="#" data-section="explore" onclick="goSection(this,'explore');return false;">🎓 Study Hub</a>
+        <a href="#" onclick="openDashboard('journal');return false;">📖 Journal</a>
+        <a href="#" onclick="openDashboard('diary');return false;">🌙 Diary</a>
+        <a href="#" onclick="openDashboard('life');return false;">✨ Life Space</a>
+        <a href="#" onclick="openThemeStudio();return false;">🎨 Theme Studio</a>
+        <a href="#" onclick="openMoodBoard();return false;">🌊 Mood Board</a>
+        <a href="#" onclick="openMusicPanel();return false;">🎧 Music</a>
+        <a href="#" onclick="openGamesHub();return false;">🕹️ Games</a>
+        <a href="#" onclick="openWritingStudio();return false;">✍️ Writing Studio</a>
+        <a href="#" onclick="openResearchSpace();return false;">🔬 Research Space</a>
+        <a href="#" onclick="openCommunity();return false;">🗣️ Community</a>
+      </div>
+
+      <div class="recent">
+        <strong>Recent Spaces</strong>
+        <div id="recentSpacesList"><span style="color:var(--muted);font-size:.8rem">Nothing yet — your recent activity will show up here.</span></div>
+      </div>
+    </div>
+
+    <div class="lily-mini">
+      <div class="row"><span class="lily-status"></span> 💜 Lily</div>
+      <p>Always here for you.</p>
+      <button onclick="openLilyChat()">Talk to Lily</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-wrap">
+  <div class="main">
+
+    <div class="topbar">
+      <input class="search" id="searchInput" placeholder="Search books, anime, games, study resources..." onkeydown="if(event.key==='Enter')runSearch()">
+      <button class="theme-launch-btn" onclick="openThemeStudio()">
+        <span class="theme-launch-dot" id="themeLaunchDot"></span> Theme
+      </button>
+    </div>
+
+    <div class="hero" id="home">
+      <h1 id="heroHeading">One Universe.<br>Everything You Love.</h1>
+      <p>Read books, watch anime, discover games, study smarter, journal your day, and let LILA personalize everything.</p>
+      <button class="cta" onclick="openOnboarding()">Launch LILAverse</button>
+
+      <div class="vibe">
+        <div class="pill" onclick="setTheme('ocean');this.parentNode.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));this.classList.add('active')">🌊 Ocean Rain</div>
+        <div class="pill" onclick="setTheme('calm');this.parentNode.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));this.classList.add('active')">☁️ Calm Focus</div>
+        <div class="pill" onclick="setTheme('sunset');this.parentNode.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));this.classList.add('active')">🌅 Lo‑Fi Nights</div>
+      </div>
+    </div>
+
+    <div class="section" id="continue">
+      <h2>Continue</h2>
+      <div class="cards">
+        <div class="card" onclick="openCard('Dracula', 'Resuming at 67% — chapter 19, Castle Dracula.')"><span class="ico">📚</span>Dracula<small>67% complete</small></div>
+        <div class="card" onclick="openCard('One Piece', 'Resuming at Episode 128.')"><span class="ico">🎌</span>One Piece<small>Episode 128</small></div>
+        <div class="card" onclick="openCard('Biology Notes', 'Opening your last saved study session.')"><span class="ico">🎓</span>Biology Notes<small>Continue studying</small></div>
+        <div class="card" onclick="openCard('Minecraft', 'Loading your last world...')"><span class="ico">🎮</span>Minecraft<small>Played today</small></div>
+      </div>
+    </div>
+
+    <div class="section" id="explore">
+      <h2>Explore</h2>
+      <div class="cards" id="exploreCards">
+        <div class="card" data-tags="books" onclick="openCard('Books', 'Browse thousands of titles or upload your own PDFs.')"><span class="ico">📚</span>Books<small>Read thousands of books and upload PDFs.</small></div>
+        <div class="card" data-tags="anime" onclick="openCard('Anime', 'Track series and get new episode alerts.')"><span class="ico">🎌</span>Anime<small>Track anime and discover new series.</small></div>
+        <div class="card" data-tags="games" onclick="openCard('Games', 'Your library, playtime, and achievements in one place.')"><span class="ico">🎮</span>Games<small>Organize your gaming universe.</small></div>
+        <div class="card" data-tags="study" onclick="openCard('Study Hub', 'AI-powered notes, flashcards, and focus sessions.')"><span class="ico">🎓</span>Study Hub<small>AI‑powered notes and productivity.</small></div>
+      </div>
+    </div>
+
+    <div class="section" id="suggested">
+      <h2>Suggested by LILA</h2>
+      <div class="cards">
+        <div class="card" onclick="openCard('The Picture of Dorian Gray', 'Added to your reading list.')"><span class="ico">📖</span>The Picture of Dorian Gray</div>
+        <div class="card" onclick="openCard('Frieren', 'Added to your watchlist.')"><span class="ico">🎌</span>Frieren</div>
+        <div class="card" onclick="openCard('Deep Work', 'Added to your reading list.')"><span class="ico">📚</span>Deep Work</div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+</div>
+
+<button class="focusBtn" id="focusBtn" onclick="openFocusRoom()">🎓 Focus Mode</button>
+
+<input type="file" id="notesFileInput" multiple style="display:none" onchange="handleNotesUpload(event)">
+
+<div class="focus-backdrop" id="focusBackdrop" onclick="if(event.target===this)closeFocusRoom()">
+  <div class="focus-room">
+    <div class="focus-main">
+      <div class="focus-head">
+        <h3>🎓 Focus Room</h3>
+        <span class="x" onclick="closeFocusRoom()">✕</span>
+      </div>
+
+      <div class="focus-timer">
+        <div class="clock" id="focusClock">25:00</div>
+        <button class="modebtn active" id="modeStudy" onclick="setFocusMode('study')">Study <span id="modeStudyLabel">25</span></button>
+        <button class="modebtn" id="modeBreak" onclick="setFocusMode('break')">Break <span id="modeBreakLabel">5</span></button>
+        <div class="ctrl">
+          <button onclick="toggleTimer()" id="timerToggleBtn">Start</button>
+          <button onclick="resetTimer()">Reset</button>
+          <button onclick="toggleTimerSettings()" title="Adjust durations">⚙️</button>
+        </div>
+      </div>
+      <div class="focus-timer-settings" id="focusTimerSettings" style="display:none">
+        <label>Study
+          <input type="number" id="studyMinutesInput" min="1" max="180" value="25" onchange="applyTimerSettings()">
+          min
+        </label>
+        <label>Break
+          <input type="number" id="breakMinutesInput" min="1" max="60" value="5" onchange="applyTimerSettings()">
+          min
+        </label>
+      </div>
+
+      <div class="upload-zone" onclick="document.getElementById('notesFileInput').click()">
+        <span class="ico">📎</span>
+        Upload your notes or readings (PDF, images, docs) — Lily will look them over.
+      </div>
+      <div class="upload-list" id="uploadList"></div>
+
+      <div class="focus-notes">
+        <label>Notes</label>
+        <textarea class="focus-notes-box" id="focusNotesBox" placeholder="Type your notes here while you study..."></textarea>
+      </div>
+
+      <div class="focus-tasks">
+        <label style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Study tasks</label>
+        <div class="task-row" style="margin-top:8px">
+          <input type="text" id="taskInput" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+          <button class="task-add" onclick="addTask()">Add</button>
+        </div>
+        <div class="task-list" id="taskList"></div>
+      </div>
+    </div>
+
+    <div class="focus-side">
+      <div class="lily-modal-head">
+        <div class="who">
+          <div class="lily-avatar-lg">💜</div>
+          <div class="who-text">
+            <strong>Lily</strong>
+            <small>Helping you study</small>
+          </div>
+        </div>
+      </div>
+      <div class="lily-modal-body" id="focusLilyBody">
+        <div class="lily-modal-msg her">Upload your notes or tell me what you're studying, and I'll find resources, help you take notes, and clarify anything confusing.</div>
+      </div>
+      <div class="lily-modal-input-row">
+        <textarea class="lily-modal-input" id="focusLilyInput" rows="1" placeholder="Ask Lily to explain a concept, find resources, or summarize your notes..."
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendFocusLily();}"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button class="lily-send-btn" onclick="sendFocusLily()">➤</button>
+      </div>
+      <div class="ai-disclaimer">Lily can make mistakes. Double-check anything important.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Lily companion -->
+<button class="lily-fab" onclick="openLilyChat()">💜</button>
+
+<div class="lily-modal-backdrop" id="lilyModalBackdrop" onclick="if(event.target===this)closeLilyChat()">
+  <div class="lily-modal">
+    <div class="lily-modal-head">
+      <div class="who">
+        <div class="lily-avatar-lg">💜</div>
+        <div class="who-text">
+          <strong>Lily</strong>
+          <small><span class="lily-status" style="width:6px;height:6px"></span> <span id="lilyStatusText">Online — your assistant</span></small>
+        </div>
+      </div>
+      <div class="lily-head-actions">
+        <span class="lily-gear" title="Connect a real AI" onclick="toggleLilyApiPanel()">⚙️</span>
+        <span class="x" onclick="closeLilyChat()">✕</span>
+      </div>
+    </div>
+
+    <div class="lily-api-panel" id="lilyApiPanel" style="display:none">
+      <p><strong style="color:var(--text)">Real AI mode.</strong> Paste your own Anthropic API key and Lily answers with a real language model instead of pre-written lines. Her Focus Room chat uses the same key.</p>
+      <input type="password" id="lilyApiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+      <input type="text" id="lilyApiModelInput" placeholder="Model (default: claude-sonnet-5-5)">
+      <div class="lily-api-actions">
+        <button class="saveBtn" onclick="saveLilyApi()">Save</button>
+        <button class="ghostBtn" onclick="clearLilyApi()">Remove key</button>
+      </div>
+      <p class="lily-api-note">The key is stored only in this browser and sent straight to Anthropic from here. Anyone who can open this browser profile can read it, so skip this on shared computers. Usage is billed to your own account.</p>
+    </div>
+
+    <div class="lily-modal-body" id="lilyModalBody">
+      <div class="lily-empty" id="lilyEmptyState">
+        <div class="big">💜</div>
+        <h4>Hi, I'm Lily</h4>
+        <p>Your assistant around LILAverse — ask me anything, or try one of these:</p>
+        <p class="lily-ai-hint" id="lilyAiHint">Right now I'm in offline mode, so my replies are pre-written. Tap ⚙️ above to connect a real AI for natural conversation.</p>
+        <div class="lily-suggestions">
+          <div class="lily-suggest-chip" onclick="quickAsk('Suggest a book for tonight')">📚 Suggest a book</div>
+          <div class="lily-suggest-chip" onclick="quickAsk('Help me reflect on today')">📖 Reflect on today</div>
+          <div class="lily-suggest-chip" onclick="quickAsk('Give me a study tip')">🎓 Study tip</div>
+          <div class="lily-suggest-chip" onclick="quickAsk('Recommend an anime')">🎌 Anime recommendation</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lily-modal-input-row">
+      <textarea class="lily-modal-input" id="lilyModalInput" rows="1" placeholder="Message Lily..."
+        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendLilyModal();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
+      <button class="lily-send-btn" onclick="sendLilyModal()">➤</button>
+    </div>
+    <div class="ai-disclaimer">Lily can make mistakes. Double-check anything important.</div>
+  </div>
+</div>
+
+<!-- Unified Dashboard: Journal / Diary / Life Space -->
+<div class="dash-backdrop" id="dashBackdrop" onclick="if(event.target===this)closeDashboard()">
+  <div class="dashboard">
+    <div class="dash-head">
+      <div>
+        <h2 id="dashTitle">📖 Journal</h2>
+        <div class="dash-subtitle" id="dashSubtitle">Quick notes on what you read, learned, or studied.</div>
+      </div>
+      <span class="x" onclick="closeDashboard()">✕</span>
+    </div>
+    <div class="tabs">
+      <div class="tab" data-tab="journal" onclick="switchTab('journal')">📖 Journal</div>
+      <div class="tab" data-tab="diary" onclick="switchTab('diary')">🌙 Diary</div>
+      <div class="tab" data-tab="life" onclick="switchTab('life')">✨ Life Space</div>
+    </div>
+    <div class="tab-panels">
+
+      <div class="tab-panel" id="panel-journal">
+        <p class="prompt-line">💜 Lily asks: What did you learn or read today?</p>
+        <div class="mood-row" data-mood-group="journal">
+          <div class="mood-orb" data-mood="📚">📚</div>
+          <div class="mood-orb" data-mood="🎓">🎓</div>
+          <div class="mood-orb" data-mood="💡">💡</div>
+          <div class="mood-orb" data-mood="🔥">🔥</div>
+        </div>
+        <textarea class="entry-box" id="entry-journal" placeholder="Notes, reading progress, ideas..."></textarea>
+        <div class="dash-actions">
+          <button class="saveBtn" onclick="saveEntry('journal')">Save Entry</button>
+          <span class="saved-note" id="saved-journal">Saved ✓</span>
+        </div>
+        <label class="entry-list-label">Recent journal entries</label>
+        <div class="entry-list" id="list-journal"></div>
+      </div>
+
+      <div class="tab-panel" id="panel-diary">
+        <p class="prompt-line">💜 Lily asks: What was the most meaningful moment of your day?</p>
+        <div class="mood-row" data-mood-group="diary">
+          <div class="mood-orb" data-mood="😊">😊</div>
+          <div class="mood-orb" data-mood="😌">😌</div>
+          <div class="mood-orb" data-mood="🔥">🔥</div>
+          <div class="mood-orb" data-mood="😴">😴</div>
+          <div class="mood-orb" data-mood="💜">💜</div>
+        </div>
+        <textarea class="entry-box" id="entry-diary" placeholder="What's on your mind today?"></textarea>
+        <div class="dash-actions">
+          <button class="saveBtn" onclick="saveEntry('diary')">Save Entry</button>
+          <span class="saved-note" id="saved-diary">Saved ✓</span>
+        </div>
+        <label class="entry-list-label">Recent diary entries</label>
+        <div class="entry-list" id="list-diary"></div>
+      </div>
+
+      <div class="tab-panel" id="panel-life">
+        <p class="prompt-line">💜 Lily asks: What are you grateful for today?</p>
+        <div class="mood-row" data-mood-group="life">
+          <div class="mood-orb" data-mood="😊">😊</div>
+          <div class="mood-orb" data-mood="😌">😌</div>
+          <div class="mood-orb" data-mood="🔥">🔥</div>
+          <div class="mood-orb" data-mood="💜">💜</div>
+        </div>
+        <textarea class="entry-box" id="entry-life" placeholder="Goals, reflections, gratitude..."></textarea>
+        <div class="dash-actions">
+          <button class="saveBtn" onclick="saveEntry('life')">Save Entry</button>
+          <span class="saved-note" id="saved-life">Saved ✓</span>
+        </div>
+        <label class="entry-list-label">Recent check-ins</label>
+        <div class="entry-list" id="list-life"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><strong id="toastTitle"></strong><div id="toastMsg"></div></div>
+<audio id="audioPlayer" loop></audio>
+
+<!-- Theme Studio -->
+<div class="dash-backdrop" id="studioBackdrop" onclick="if(event.target===this)closeThemeStudio()">
+  <div class="dashboard" style="width:min(560px,92vw)">
+    <div class="dash-head">
+      <h2>🎨 Theme Studio</h2>
+      <span class="x" onclick="closeThemeStudio()">✕</span>
+    </div>
+    <div class="tab-panels">
+      <p class="prompt-line">Pick a preset, or describe a mood and let Lily generate one for you.</p>
+
+      <div class="studio-presets" id="presetGrid">
+        <div class="preset-swatch" data-preset="cyberpunk" onclick="applyPreset('cyberpunk')">
+          <div class="preset-dots"><span style="background:#8b5cf6"></span><span style="background:#22d3ee"></span><span style="background:#ec4899"></span></div>
+          Cyberpunk
+        </div>
+        <div class="preset-swatch" data-preset="ocean" onclick="applyPreset('ocean')">
+          <div class="preset-dots"><span style="background:#0ea5e9"></span><span style="background:#22d3ee"></span><span style="background:#2dd4bf"></span></div>
+          Ocean
+        </div>
+        <div class="preset-swatch" data-preset="sunset" onclick="applyPreset('sunset')">
+          <div class="preset-dots"><span style="background:#f97316"></span><span style="background:#ec4899"></span><span style="background:#facc15"></span></div>
+          Sunset
+        </div>
+        <div class="preset-swatch" data-preset="calm" onclick="applyPreset('calm')">
+          <div class="preset-dots"><span style="background:#a78bfa"></span><span style="background:#c4b5fd"></span><span style="background:#f0abfc"></span></div>
+          Calm Focus
+        </div>
+        <div class="preset-swatch" data-preset="sakura" onclick="applyPreset('sakura')">
+          <div class="preset-dots"><span style="background:#f9a8d4"></span><span style="background:#fb7185"></span><span style="background:#fde68a"></span></div>
+          Sakura
+        </div>
+        <div class="preset-swatch" data-preset="forest" onclick="applyPreset('forest')">
+          <div class="preset-dots"><span style="background:#34d399"></span><span style="background:#84cc16"></span><span style="background:#facc15"></span></div>
+          Forest
+        </div>
+        <div class="preset-swatch" data-preset="galaxy" onclick="applyPreset('galaxy')">
+          <div class="preset-dots"><span style="background:#818cf8"></span><span style="background:#c084fc"></span><span style="background:#22d3ee"></span></div>
+          Galaxy
+        </div>
+      </div>
+
+      <hr class="studio-divider">
+
+      <div class="ai-generate-panel">
+        <p class="prompt-line" style="margin-bottom:10px">✨ Or let Lily generate one</p>
+        <input type="text" id="aiThemeSeed" placeholder="e.g. cozy rainy night, focused morning..."
+          class="ai-seed-input"
+          onkeydown="if(event.key==='Enter')generateAiTheme()">
+        <button class="ai-generate-btn" onclick="generateAiTheme()">
+          <span class="ai-generate-sparkle">✨</span> Generate My Theme
+        </button>
+
+        <div class="studio-preview" id="studioPreview">Pick a preset above, or generate one</div>
+
+        <div class="studio-actions" id="aiThemeActions" style="display:none">
+          <button class="saveBtn" onclick="saveCustomTheme()">Keep this theme</button>
+          <button class="ghostBtn" onclick="generateAiTheme()">Regenerate</button>
+        </div>
+      </div>
+
+      <hr class="studio-divider">
+
+      <div class="gradient-controls">
+        <p class="prompt-line" style="margin-bottom:10px">🌈 Background gradients</p>
+        <div class="studio-row">
+          <label>Intensity</label>
+          <input type="range" id="blobStrengthSlider" min="0" max="150" value="100" oninput="setBlobStrength(this.value)">
+        </div>
+        <div class="studio-row">
+          <label>Motion</label>
+          <button class="ghostBtn" id="blobMotionBtn" onclick="toggleBlobMotion()">Animated</button>
+        </div>
+      </div>
+
+      <!-- Hidden — internal color state used by the generator, save, and preview -->
+      <div style="display:none">
+        <input type="color" id="colorAccent1" value="#8b5cf6">
+        <input type="color" id="colorAccent2" value="#22d3ee">
+        <input type="color" id="colorAccent3" value="#ec4899">
+        <input type="color" id="colorBg" value="#0a0e1a">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty State (reused for unbuilt sections) -->
+<div class="dash-backdrop" id="emptyBackdrop" onclick="if(event.target===this)closeEmptyState()">
+  <div class="dashboard" style="width:min(460px,92vw)">
+    <div class="dash-head">
+      <h2 id="emptyModalTitle">Section</h2>
+      <span class="x" onclick="closeEmptyState()">✕</span>
+    </div>
+    <div class="tab-panels">
+      <div class="empty-wrap">
+        <div class="empty-ring" id="emptyIcon">✨</div>
+        <div class="empty-title">Nothing here yet</div>
+        <div class="empty-sub">We're still fetching resources<span class="empty-dots"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding Tour -->
+<div class="dash-backdrop" id="onbBackdrop">
+  <div class="dashboard" style="width:min(560px,92vw)">
+    <div class="tab-panels">
+
+      <div class="onb-slide active" data-step="0">
+        <div class="onb-ico">🌌</div>
+        <h3>Welcome to LILAverse</h3>
+        <p>One universe for everything you love — books, anime, games, study, and your own private space to reflect. I'm here to help you get oriented before you dive in.</p>
+      </div>
+
+      <div class="onb-slide" data-step="1">
+        <div class="onb-ico">📖</div>
+        <h3>Journal, Diary & Life Space</h3>
+        <p>A calm place to write things down. Pick a mood, jot your thoughts, and look back on past entries anytime — it's all saved right here for you.</p>
+      </div>
+
+      <div class="onb-slide" data-step="2">
+        <div class="onb-ico">🎨</div>
+        <h3>Make it yours</h3>
+        <p>Open Theme Studio anytime to switch the whole look and feel — pick a preset or mix your own colors. It's saved so it's exactly how you left it next time.</p>
+      </div>
+
+      <div class="onb-slide" data-step="3">
+        <div class="onb-ico">💜</div>
+        <h3>Meet Lily</h3>
+        <p>Hi — I'm Lily, your assistant and helping hand around here. I'll check in, suggest books, anime, and study sessions, and I'm always just a click away in the corner.</p>
+      </div>
+
+      <div class="onb-progress" id="onbProgress">
+        <span class="onb-dot active"></span>
+        <span class="onb-dot"></span>
+        <span class="onb-dot"></span>
+        <span class="onb-dot"></span>
+      </div>
+
+      <div class="onb-actions">
+        <button class="onb-skip" onclick="finishOnboarding()">Skip</button>
+        <button class="saveBtn" id="onbNextBtn" onclick="onbNext()">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ SHARED MODAL HELPERS ============
+   Most of the app's overlays are just "toggle .active on a backdrop by id".
+   Centralizing that here removes ~10 near-identical one-line open/close
+   functions that used to repeat the same two lines with a different id. */
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+/* ============ THEME ============ */
+const presetValues = {
+  cyberpunk:{a1:'#8b5cf6',a2:'#22d3ee',a3:'#ec4899',bg:'#0a0e1a'},
+  ocean:{a1:'#0ea5e9',a2:'#22d3ee',a3:'#2dd4bf',bg:'#071019'},
+  sunset:{a1:'#f97316',a2:'#ec4899',a3:'#facc15',bg:'#160b11'},
+  calm:{a1:'#a78bfa',a2:'#c4b5fd',a3:'#f0abfc',bg:'#0d0b16'},
+  sakura:{a1:'#f9a8d4',a2:'#fb7185',a3:'#fde68a',bg:'#160c14'},
+  forest:{a1:'#34d399',a2:'#84cc16',a3:'#facc15',bg:'#0a120e'},
+  galaxy:{a1:'#818cf8',a2:'#c084fc',a3:'#22d3ee',bg:'#0a0a18'}
+};
+
+function setTheme(name){
+  document.body.setAttribute('data-theme', name);
+  localStorage.setItem('lilaTheme', name);
+  document.querySelectorAll('.preset-swatch').forEach(s=>s.classList.toggle('active', s.dataset.preset===name));
+}
+
+function applyPreset(name){
+  setTheme(name);
+  const p = presetValues[name];
+  if(p){
+    document.getElementById('colorAccent1').value = p.a1;
+    document.getElementById('colorAccent2').value = p.a2;
+    document.getElementById('colorAccent3').value = p.a3;
+    document.getElementById('colorBg').value = p.bg;
+    const preview = document.getElementById('studioPreview');
+    preview.style.background = `linear-gradient(135deg, ${p.a1}, ${p.a2})`;
+    preview.style.color = '#fff';
+    preview.style.boxShadow = `0 14px 34px -10px ${p.a1}`;
+    preview.textContent = name.charAt(0).toUpperCase()+name.slice(1)+' theme applied';
+  }
+  document.getElementById('aiThemeActions').style.display = 'none';
+  showToast('Theme', name.charAt(0).toUpperCase()+name.slice(1)+' theme applied.');
+}
+
+function applyCustomColors(){
+  const a1 = document.getElementById('colorAccent1').value;
+  const a2 = document.getElementById('colorAccent2').value;
+  const a3 = document.getElementById('colorAccent3').value;
+  const bg = document.getElementById('colorBg').value;
+  document.documentElement.style.setProperty('--custom-1', a1);
+  document.documentElement.style.setProperty('--custom-2', a2);
+  document.documentElement.style.setProperty('--custom-3', a3);
+  document.documentElement.style.setProperty('--custom-bg', bg);
+  document.body.setAttribute('data-theme', 'custom');
+  document.querySelectorAll('.preset-swatch').forEach(s=>s.classList.remove('active'));
+}
+
+function saveCustomTheme(){
+  applyCustomColors();
+  const custom = {
+    a1:document.getElementById('colorAccent1').value,
+    a2:document.getElementById('colorAccent2').value,
+    a3:document.getElementById('colorAccent3').value,
+    bg:document.getElementById('colorBg').value
+  };
+  localStorage.setItem('lilaCustomTheme', JSON.stringify(custom));
+  localStorage.setItem('lilaTheme', 'custom');
+  showToast('Theme Studio', 'Your custom theme is saved.');
+}
+
+function openThemeStudio(){
+  document.getElementById('studioBackdrop').classList.add('active');
+  document.getElementById('aiThemeActions').style.display = 'none';
+  document.getElementById('aiThemeSeed').value = '';
+
+  const current = document.body.getAttribute('data-theme');
+  document.querySelectorAll('.preset-swatch').forEach(s=>s.classList.toggle('active', s.dataset.preset===current));
+
+  const preview = document.getElementById('studioPreview');
+  if(presetValues[current]){
+    const p = presetValues[current];
+    preview.style.background = `linear-gradient(135deg, ${p.a1}, ${p.a2})`;
+    preview.style.color = '#fff';
+    preview.style.boxShadow = `0 14px 34px -10px ${p.a1}`;
+    preview.textContent = current.charAt(0).toUpperCase()+current.slice(1)+' theme active';
+  } else {
+    preview.style.background = 'var(--glass)';
+    preview.style.color = 'var(--muted)';
+    preview.style.boxShadow = 'none';
+    preview.textContent = 'Pick a preset above, or generate one';
+  }
+}
+function closeThemeStudio(){ closeModal('studioBackdrop'); }
+
+/* -- AI-style theme generation --
+   Real HSL color math + a curated mood-keyword-to-color-psychology map, so a word's
+   actual emotional connotation drives the palette (cozy != energetic != melancholy),
+   not just an arbitrary hash. This is deliberate color-psychology mapping, not
+   semantic language understanding — there's no NLP model here, just a lookup table
+   matched against what you typed, with graceful fallback for words it doesn't recognize. */
+function hslToHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h/30) % 12;
+  const a = s * Math.min(l, 1-l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+  const toHex = x => Math.round(255*x).toString(16).padStart(2,'0');
+  return '#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+}
+function hashString(str){
+  let hash = 0;
+  for(let i=0;i<str.length;i++){ hash = str.charCodeAt(i) + ((hash<<5)-hash); }
+  return Math.abs(hash);
+}
+function guessSeedFromContext(){
+  const recent = JSON.parse(localStorage.getItem(recentKey()) || '[]');
+  const hour = new Date().getHours();
+  if(recent.length) return recent[0].label + hour;
+  if(hour < 6) return 'quiet night stillness';
+  if(hour < 12) return 'fresh bright morning';
+  if(hour < 18) return 'focused daylight energy';
+  return 'calm evening wind down';
+}
+
+const moodPalettes = [
+  { name:'cozy',        keywords:['cozy','cosy','coziness','rain','rainy','fireplace','blanket','tea','coffee','autumn','cabin','candle','warm'],                                    hue:[20,45],  sat:[50,68], light:[45,58], bgLight:8  },
+  { name:'calm',        keywords:['calm','calmness','peaceful','peace','relax','serene','serenity','quiet','tranquil','tranquility','zen','gentle','meditat','breeze'],               hue:[178,210],sat:[42,62], light:[55,68], bgLight:7  },
+  { name:'energetic',   keywords:['energetic','energy','happy','happiness','excit','bright','morning','fresh','vibrant','joy','joyful','sunny','upbeat'],                            hue:[35,58],  sat:[75,92], light:[55,66], bgLight:6  },
+  { name:'romantic',    keywords:['romantic','romance','love','loving','sweet','valentine','crush','affection','tender','tenderness'],                                               hue:[318,345],sat:[58,75], light:[60,70], bgLight:9  },
+  { name:'melancholy',  keywords:['sad','sadness','melanchol','lonely','loneliness','somber','nostalgi','wistful','grief','griev','gloomy','gloom'],                                 hue:[215,245],sat:[22,38], light:[42,52], bgLight:5  },
+  { name:'mysterious',  keywords:['night','dark','mystery','mysterious','galaxy','stars','starry','midnight','moon','space','cosmic'],                                               hue:[250,285],sat:[52,72], light:[48,60], bgLight:5  },
+  { name:'nature',      keywords:['forest','nature','natural','spring','garden','leaf','leaves','tree','earthy','woods','woodland'],                                                 hue:[95,150], sat:[42,62], light:[42,56], bgLight:6  },
+  { name:'focused',     keywords:['focus','study','studying','productiv','work','concentrat','deep work','exam'],                                                                    hue:[195,215],sat:[52,68], light:[50,60], bgLight:6  },
+  { name:'passionate',  keywords:['passion','fire','fiery','intens','power','powerful','bold','anger','angry','furious','fury','fierce'],                                            hue:[0,15],   sat:[68,86], light:[50,60], bgLight:6  },
+  { name:'dreamy',      keywords:['dream','dreaming','dreamy','fantasy','magical','magic','whimsical','fairy','pastel'],                                                             hue:[268,300],sat:[42,58], light:[63,74], bgLight:8  }
+];
+
+/* Direct color names take top priority — if you type "red" you should get red,
+   full stop, not whatever an emotion-matcher or hash happens to land on.
+   Checked before mood keywords so an explicit color name always wins. */
+const colorNameHues = {
+  red:0, crimson:352, scarlet:6, maroon:0,
+  orange:28, amber:38, coral:12, peach:22,
+  gold:45, yellow:50, lemon:55,
+  lime:78, chartreuse:85,
+  green:132, emerald:150, olive:70, mint:150,
+  teal:175, turquoise:180, cyan:190, aqua:185,
+  blue:215, azure:200, sky:200, navy:222, cobalt:210, sapphire:220,
+  indigo:245, periwinkle:235,
+  purple:270, violet:265, lavender:258, lilac:275,
+  magenta:300, fuchsia:295, orchid:302,
+  pink:330, rose:340, salmon:8,
+  brown:25, tan:35, beige:38, sand:40
+};
+const grayscaleWords = ['black','white','gray','grey','silver','charcoal','ivory','monochrome'];
+function pickColorNameFromSeed(seed){
+  const words = seed.toLowerCase().split(/[^a-z]+/);
+  for(const w of words){
+    if(colorNameHues[w] !== undefined) return { hue: colorNameHues[w], name:w };
+  }
+  // also catch color names as substrings of longer seed phrases (e.g. "reddish")
+  const lower = seed.toLowerCase();
+  for(const name in colorNameHues){
+    if(lower.includes(name)) return { hue: colorNameHues[name], name };
+  }
+  for(const g of grayscaleWords){
+    if(lower.includes(g)) return { hue: 220, name:g, grayscale:true };
+  }
+  return null;
+}
+
+function pickMoodFromSeed(seed){
+  const lower = seed.toLowerCase();
+  let best = null, bestScore = 0;
+  for(const mood of moodPalettes){
+    let score = 0;
+    for(const kw of mood.keywords){ if(lower.includes(kw)) score++; }
+    if(score > bestScore){ bestScore = score; best = mood; }
+  }
+  return best;
+}
+function randIn([min,max]){ return min + Math.random()*(max-min); }
+
+function generateAiTheme(){
+  let seed = document.getElementById('aiThemeSeed').value.trim();
+  const usedContext = !seed;
+  if(!seed) seed = guessSeedFromContext();
+
+  const colorMatch = pickColorNameFromSeed(seed);
+  const mood = colorMatch ? null : pickMoodFromSeed(seed);
+  let baseHue, sat, light, bgLight, matchLabel;
+
+  if(colorMatch){
+    // Explicit color name: honor it directly, with a small jitter so regenerate
+    // still gives variety while staying recognizably that color.
+    baseHue = (colorMatch.hue + (Math.random()*24 - 12) + 360) % 360;
+    sat = colorMatch.grayscale ? (8 + Math.random()*10) : (68 + Math.random()*18);
+    light = colorMatch.grayscale ? (55 + Math.random()*15) : (52 + Math.random()*14);
+    bgLight = colorMatch.grayscale ? 7 : 6;
+    matchLabel = colorMatch.name;
+  } else if(mood){
+    baseHue = randIn(mood.hue);
+    sat = randIn(mood.sat);
+    light = randIn(mood.light);
+    bgLight = mood.bgLight;
+    matchLabel = mood.name;
+  } else {
+    // No recognized color or mood — fall back to a hashed hue so it's still
+    // seed-specific rather than fully random, just without emotional grounding.
+    const seedHue = hashString(seed) % 360;
+    const jitter = Math.floor(Math.random()*70) - 35;
+    baseHue = (seedHue + jitter + 360) % 360;
+    sat = 65 + Math.random()*15;
+    light = 55 + Math.random()*12;
+    bgLight = 6;
+    matchLabel = null;
+  }
+
+  const a1 = hslToHex(baseHue, sat, light);
+  const a2 = hslToHex((baseHue + 35 + Math.random()*15) % 360, Math.max(sat-6,20), Math.max(light-3,35));
+  const a3 = hslToHex((baseHue + 288 + Math.random()*24) % 360, sat, Math.min(light+4,78));
+  const bg = hslToHex(baseHue, Math.min(sat,42), bgLight);
+
+  document.getElementById('colorAccent1').value = a1;
+  document.getElementById('colorAccent2').value = a2;
+  document.getElementById('colorAccent3').value = a3;
+  document.getElementById('colorBg').value = bg;
+  applyCustomColors();
+
+  const preview = document.getElementById('studioPreview');
+  preview.style.background = `linear-gradient(135deg, ${a1}, ${a2})`;
+  preview.style.color = '#fff';
+  preview.style.boxShadow = `0 14px 34px -10px ${a1}`;
+  preview.textContent = usedContext
+    ? `Generated from your recent activity`
+    : colorMatch
+      ? `A ${matchLabel}-toned palette from "${seed}"`
+      : mood
+        ? `A ${matchLabel} palette from "${seed}"`
+        : `Generated from "${seed}"`;
+  document.getElementById('aiThemeActions').style.display = 'flex';
+}
+
+/* ============ GRADIENT / BLOB CONTROLS ============ */
+function setBlobStrength(val){
+  const strength = val / 100;
+  document.documentElement.style.setProperty('--blob-strength', strength);
+  localStorage.setItem('lilaBlobStrength', val);
+}
+function toggleBlobMotion(){
+  const current = document.documentElement.style.getPropertyValue('--blob-motion') || 'running';
+  const next = current.trim() === 'paused' ? 'running' : 'paused';
+  document.documentElement.style.setProperty('--blob-motion', next);
+  localStorage.setItem('lilaBlobMotion', next);
+  const btn = document.getElementById('blobMotionBtn');
+  btn.textContent = next === 'paused' ? 'Paused' : 'Animated';
+  btn.classList.toggle('active-toggle', next === 'running');
+}
+function loadBlobSettings(){
+  const strength = localStorage.getItem('lilaBlobStrength');
+  const motion = localStorage.getItem('lilaBlobMotion');
+  if(strength !== null){
+    document.documentElement.style.setProperty('--blob-strength', strength / 100);
+    const slider = document.getElementById('blobStrengthSlider');
+    if(slider) slider.value = strength;
+  }
+  if(motion){
+    document.documentElement.style.setProperty('--blob-motion', motion);
+    const btn = document.getElementById('blobMotionBtn');
+    if(btn){
+      btn.textContent = motion === 'paused' ? 'Paused' : 'Animated';
+      btn.classList.toggle('active-toggle', motion === 'running');
+    }
+  } else {
+    const btn = document.getElementById('blobMotionBtn');
+    if(btn) btn.classList.add('active-toggle');
+  }
+}
+
+window.addEventListener('load', ()=>{
+  const customSaved = localStorage.getItem('lilaCustomTheme');
+  if(customSaved){
+    const c = JSON.parse(customSaved);
+    document.getElementById('colorAccent1').value = c.a1;
+    document.getElementById('colorAccent2').value = c.a2;
+    document.getElementById('colorAccent3').value = c.a3;
+    document.getElementById('colorBg').value = c.bg;
+    document.documentElement.style.setProperty('--custom-1', c.a1);
+    document.documentElement.style.setProperty('--custom-2', c.a2);
+    document.documentElement.style.setProperty('--custom-3', c.a3);
+    document.documentElement.style.setProperty('--custom-bg', c.bg);
+  }
+  const saved = localStorage.getItem('lilaTheme');
+  if(saved) setTheme(saved);
+});
+
+/* ============ LILY CHAT (full modal) ============ */
+function openLilyChat(){
+  document.getElementById('lilyModalBackdrop').classList.add('active');
+  document.getElementById('lilyModalInput').focus();
+}
+function closeLilyChat(){ closeModal('lilyModalBackdrop'); }
+function quickAsk(text){
+  document.getElementById('lilyModalInput').value = text;
+  sendLilyModal();
+}
+function addLilyMessage(text, who){
+  const emptyState = document.getElementById('lilyEmptyState');
+  if(emptyState) emptyState.remove();
+  const body = document.getElementById('lilyModalBody');
+  const msg = document.createElement('div');
+  msg.className = 'lily-modal-msg ' + (who === 'me' ? 'me' : 'her');
+  msg.textContent = text;
+  body.appendChild(msg);
+  body.scrollTop = body.scrollHeight;
+  return msg;
+}
+function sendLilyModal(){
+  const input = document.getElementById('lilyModalInput');
+  const text = input.value.trim();
+  if(!text) return;
+  addLilyMessage(text, 'me');
+  input.value = '';
+  input.style.height = 'auto';
+
+  const body = document.getElementById('lilyModalBody');
+  const typing = document.createElement('div');
+  typing.className = 'lily-typing';
+  typing.id = 'lilyTyping';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  body.appendChild(typing);
+  body.scrollTop = body.scrollHeight;
+
+  const finish = (reply)=>{
+    const t = document.getElementById('lilyTyping');
+    if(t) t.remove();
+    addLilyMessage(reply, 'her');
+  };
+
+  if(getApiKey()){
+    lilyHistory.push({role:'user', content:text});
+    askClaude(lilySystemPrompt(), lilyHistory)
+      .then(reply => { lilyHistory.push({role:'assistant', content:reply}); finish(reply); })
+      .catch(err => { lilyHistory.pop(); finish(aiErrorMessage(err)); });
+    return;
+  }
+
+  const reply = craftLilyReply(text);
+  setTimeout(()=>finish(reply), 700 + Math.random()*500);
+}
+
+/* Real variety instead of one fixed sentence per topic, and grounded in whatever
+   the person has actually done in the app (recent activity, their name) where
+   that's available, instead of a hardcoded placeholder book/anime title every time. */
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function getLastActivity(){
+  const list = JSON.parse(localStorage.getItem(recentKey()) || '[]');
+  return list.length ? list[0] : null;
+}
+function craftLilyReply(text){
+  const lower = text.toLowerCase();
+  const name = currentProfile();
+  const last = getLastActivity();
+
+  if(lower.includes('book')){
+    return pick([
+      "The Picture of Dorian Gray's been sitting in Explore if you want something classic — or Deep Work if you're more in a nonfiction mood. Which sounds better right now?",
+      "Depends what you're after — something absorbing, or something quick? I can point you at a couple either way.",
+      last ? `You were just on ${last.label} — want a book that fits that mood, or a total change of pace?` : "What kind of book — something you can lose an afternoon in, or something short?",
+    ]);
+  }
+  if(lower.includes('anime')){
+    return pick([
+      "Frieren if you want something slower and reflective, One Piece if you just want to keep the momentum going on what you're already watching.",
+      "What are you in the mood for — something emotional, something funny, or background noise while you do something else?",
+      "I can pull up a couple based on what's in your Continue list, if you want."
+    ]);
+  }
+  if(lower.includes('study') || lower.includes('focus')){
+    return pick([
+      `Want me to open Focus Room? You can set your own study/break lengths in there now, not just the default 25/5.`,
+      "A focused block usually helps more than trying to push through — want me to set one up?",
+      name !== 'Guest' ? `${name}, if you tell me the subject I can tailor the block — otherwise Focus Room's ready whenever.` : "Tell me the subject and I can tailor a study block, or just head into Focus Room whenever you're ready."
+    ]);
+  }
+  if(lower.includes('reflect') || lower.includes('today') || lower.includes('feel')){
+    return pick([
+      "Want to put it in your Diary? Sometimes writing it down helps more than talking it through first.",
+      "I'm here either way — you can tell me now, or open Diary and write it out, whichever feels easier.",
+      "That's worth holding onto. Diary's right there if you want it in writing, or just tell me."
+    ]);
+  }
+  if(lower.includes('game')){
+    return pick([
+      "Games Hub has Memory Match and Word Guess if you want something quick solo, or Tic-Tac-Toe if someone's around to play.",
+      "Quick Math and Reaction Test are good for a short break — want me to open Games?",
+    ]);
+  }
+  if(lower.includes('thank')){
+    return pick(["Anytime.", "Of course — that's what I'm here for.", "Happy to help."]);
+  }
+  if(/^(hi|hey|hello|yo)\b/.test(lower)){
+    return pick([
+      name !== 'Guest' ? `Hey ${name} — what's going on?` : "Hey — what's on your mind?",
+      "Hi! What are we doing today?",
+    ]);
+  }
+  if(lower.includes('tired') || lower.includes('exhausted') || lower.includes('sleep')){
+    return pick([
+      "Sounds like a break might help more than pushing through — Life Space has a spot to check in if you want.",
+      "Worth listening to that. No shame in stopping here for now."
+    ]);
+  }
+
+  const generic = [
+    "Tell me more — I'm listening.",
+    "Want me to save that somewhere, like your Journal or Life Space?",
+    "That's worth remembering — want me to open your Diary for this?",
+    "I can help with books, anime, study, games, or just talking things through — what sounds right?",
+    "Go on — I'm here."
+  ];
+  return pick(generic);
+}
+
+/* ============ DASHBOARD (Journal / Diary / Life Space) ============ */
+const dashTitles = { journal:'📖 Journal', diary:'🌙 Diary', life:'✨ Life Space' };
+const dashSubtitles = {
+  journal: 'Quick notes on what you read, learned, or studied.',
+  diary: 'A private space for how your day actually felt.',
+  life: 'Gratitude, goals, and how you\'re doing overall — check in when you can.'
+};
+const selectedMood = { journal:null, diary:null, life:null };
+
+function openDashboard(tab){
+  document.getElementById('dashBackdrop').classList.add('active');
+  switchTab(tab);
+}
+function closeDashboard(){ closeModal('dashBackdrop'); }
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('dashTitle').textContent = dashTitles[tab];
+  document.getElementById('dashSubtitle').textContent = dashSubtitles[tab];
+}
+function saveEntry(tab){
+  const text = document.getElementById('entry-'+tab).value;
+  const mood = selectedMood[tab] || '';
+  const date = new Date().toLocaleDateString(undefined, {month:'short', day:'numeric'});
+  const profile = currentProfile();
+
+  localStorage.setItem('lila-'+profile+'-'+tab+'-text', text);
+
+  const historyKey = 'lila-'+profile+'-'+tab+'-history';
+  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  history.unshift({date, mood});
+  localStorage.setItem(historyKey, JSON.stringify(history.slice(0,8)));
+  renderHistory(tab);
+
+  const tabLabels = {journal:['📖','Journal entry'], diary:['🌙','Diary entry'], life:['✨','Life Space check-in']};
+  const [icon, label] = tabLabels[tab] || ['📖','Entry'];
+  logRecentActivity(icon, label);
+
+  const note = document.getElementById('saved-'+tab);
+  note.classList.add('show');
+  setTimeout(()=>note.classList.remove('show'), 1800);
+}
+function renderHistory(tab){
+  const list = document.getElementById('list-'+tab);
+  const history = JSON.parse(localStorage.getItem('lila-'+currentProfile()+'-'+tab+'-history') || '[]');
+  list.innerHTML = history.map(h => `<div class="entry-pill">${h.mood ? h.mood+' ' : ''}${h.date}</div>`).join('');
+}
+
+document.querySelectorAll('.mood-row').forEach(row=>{
+  row.addEventListener('click', (e)=>{
+    const orb = e.target.closest('.mood-orb');
+    if(!orb) return;
+    const group = row.dataset.moodGroup;
+    row.querySelectorAll('.mood-orb').forEach(o=>o.classList.remove('selected'));
+    orb.classList.add('selected');
+    selectedMood[group] = orb.dataset.mood;
+  });
+});
+
+/* Journal/diary/life entries are loaded per-profile in applyProfile() */
+
+/* ============ TOAST ============ */
+let toastTimer;
+function showToast(title, msg){
+  const toast = document.getElementById('toast');
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMsg').textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove('show'), 2600);
+}
+
+/* ============ NAV / SECTIONS ============ */
+function goSection(el, id){
+  document.querySelectorAll('#mainNav a').forEach(a=>a.classList.remove('active'));
+  el.classList.add('active');
+  const target = document.getElementById(id);
+  if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ============ SEARCH ============ */
+function runSearch(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(!q){ document.getElementById('home').scrollIntoView({behavior:'smooth'}); return; }
+  const cards = document.querySelectorAll('#exploreCards .card');
+  let matched = 0;
+  cards.forEach(c=>{
+    const text = c.textContent.toLowerCase();
+    const isMatch = text.includes(q);
+    c.style.display = isMatch ? '' : 'none';
+    if(isMatch) matched++;
+  });
+  document.getElementById('explore').scrollIntoView({behavior:'smooth', block:'start'});
+  showToast('Search', matched ? `Found ${matched} match(es) for "${q}" in Explore.` : `No matches for "${q}" — showing everything.`);
+  if(!matched) cards.forEach(c=>c.style.display='');
+}
+
+/* ============ CARD CLICKS ============ */
+function openCard(title, msg){
+  showToast(title, msg);
+}
+
+/* ============ EMPTY STATE ============ */
+function openEmptyState(title, icon){
+  document.getElementById('emptyModalTitle').textContent = title;
+  document.getElementById('emptyIcon').textContent = icon || '✨';
+  document.getElementById('emptyBackdrop').classList.add('active');
+}
+function closeEmptyState(){ closeModal('emptyBackdrop'); }
+
+/* ============ ONBOARDING TOUR ============ */
+let onbStep = 0;
+const onbTotal = 4;
+function openOnboarding(){
+  onbStep = 0;
+  renderOnbStep();
+  document.getElementById('onbBackdrop').classList.add('active');
+}
+function renderOnbStep(){
+  document.querySelectorAll('.onb-slide').forEach(s=>s.classList.toggle('active', Number(s.dataset.step)===onbStep));
+  document.querySelectorAll('.onb-dot').forEach((d,i)=>d.classList.toggle('active', i===onbStep));
+  document.getElementById('onbNextBtn').textContent = onbStep === onbTotal-1 ? "Let's go" : 'Next';
+}
+function onbNext(){
+  if(onbStep < onbTotal-1){
+    onbStep++;
+    renderOnbStep();
+  } else {
+    finishOnboarding();
+  }
+}
+function finishOnboarding(){
+  document.getElementById('onbBackdrop').classList.remove('active');
+  localStorage.setItem('lilaOnboarded', 'true');
+  openLilyChat();
+  addLilyMessage("Hi! I'm Lily 💜 — your assistant here. I'll help you find books, anime, and study sessions, and I'm always around if you want to talk or reflect on your day. Where should we start?", 'her');
+}
+
+/* ============ FOCUS ROOM ============ */
+let studyMinutes = 25, breakMinutes = 5;
+let focusSeconds = studyMinutes*60, focusMode = 'study', timerRunning = false, timerHandle = null;
+let uploadedNotes = [];
+let studyTasks = [];
+
+function openFocusRoom(){
+  document.getElementById('focusBackdrop').classList.add('active');
+  document.getElementById('focusBtn').classList.add('active');
+  loadTimerSettings();
+}
+function closeFocusRoom(){
+  document.getElementById('focusBackdrop').classList.remove('active');
+  document.getElementById('focusBtn').classList.remove('active');
+}
+function toggleTimerSettings(){
+  const box = document.getElementById('focusTimerSettings');
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+function loadTimerSettings(){
+  const savedStudy = localStorage.getItem('lilaStudyMinutes');
+  const savedBreak = localStorage.getItem('lilaBreakMinutes');
+  if(savedStudy) studyMinutes = parseInt(savedStudy, 10);
+  if(savedBreak) breakMinutes = parseInt(savedBreak, 10);
+  document.getElementById('studyMinutesInput').value = studyMinutes;
+  document.getElementById('breakMinutesInput').value = breakMinutes;
+  document.getElementById('modeStudyLabel').textContent = studyMinutes;
+  document.getElementById('modeBreakLabel').textContent = breakMinutes;
+  if(!timerRunning){
+    focusSeconds = (focusMode === 'study' ? studyMinutes : breakMinutes) * 60;
+    renderClock();
+  }
+}
+function applyTimerSettings(){
+  const studyVal = Math.max(1, Math.min(180, parseInt(document.getElementById('studyMinutesInput').value, 10) || 25));
+  const breakVal = Math.max(1, Math.min(60, parseInt(document.getElementById('breakMinutesInput').value, 10) || 5));
+  studyMinutes = studyVal;
+  breakMinutes = breakVal;
+  document.getElementById('studyMinutesInput').value = studyVal;
+  document.getElementById('breakMinutesInput').value = breakVal;
+  document.getElementById('modeStudyLabel').textContent = studyVal;
+  document.getElementById('modeBreakLabel').textContent = breakVal;
+  localStorage.setItem('lilaStudyMinutes', studyVal);
+  localStorage.setItem('lilaBreakMinutes', breakVal);
+  if(!timerRunning){
+    focusSeconds = (focusMode === 'study' ? studyMinutes : breakMinutes) * 60;
+    renderClock();
+  }
+  showToast('Focus Room', `Study ${studyVal}min / Break ${breakVal}min saved.`);
+}
+function setFocusMode(mode){
+  focusMode = mode;
+  focusSeconds = (mode === 'study' ? studyMinutes : breakMinutes) * 60;
+  document.getElementById('modeStudy').classList.toggle('active', mode==='study');
+  document.getElementById('modeBreak').classList.toggle('active', mode==='break');
+  pauseTimer();
+  renderClock();
+}
+function renderClock(){
+  const m = String(Math.floor(focusSeconds/60)).padStart(2,'0');
+  const s = String(focusSeconds%60).padStart(2,'0');
+  document.getElementById('focusClock').textContent = m+':'+s;
+}
+function toggleTimer(){
+  timerRunning ? pauseTimer() : startTimer();
+}
+function startTimer(){
+  timerRunning = true;
+  document.getElementById('timerToggleBtn').textContent = 'Pause';
+  timerHandle = setInterval(()=>{
+    if(focusSeconds > 0){
+      focusSeconds--;
+      renderClock();
+    } else {
+      pauseTimer();
+      showToast('Focus Room', focusMode === 'study' ? 'Study block done — time for a break!' : 'Break over — ready for another round?');
+    }
+  }, 1000);
+}
+function pauseTimer(){
+  timerRunning = false;
+  clearInterval(timerHandle);
+  const btn = document.getElementById('timerToggleBtn');
+  if(btn) btn.textContent = 'Start';
+}
+function resetTimer(){
+  pauseTimer();
+  focusSeconds = (focusMode === 'study' ? studyMinutes : breakMinutes) * 60;
+  renderClock();
+}
+
+function handleNotesUpload(event){
+  const files = Array.from(event.target.files || []);
+  files.forEach(f => uploadedNotes.push(f.name));
+  renderUploads();
+  if(files.length){
+    const body = document.getElementById('focusLilyBody');
+    const msg = document.createElement('div');
+    msg.className = 'lily-modal-msg her';
+    msg.innerHTML = `Got ${files.length === 1 ? '"'+files[0].name+'"' : files.length+' files'} — I'll look them over and pull out the key concepts. Ask me anything about them, or tell me what's confusing.`;
+    body.appendChild(msg);
+    body.scrollTop = body.scrollHeight;
+  }
+  event.target.value = '';
+}
+function renderUploads(){
+  const list = document.getElementById('uploadList');
+  list.innerHTML = uploadedNotes.map((name, i) => `
+    <div class="upload-chip">📄 <span class="name">${name}</span> <span class="remove" onclick="removeUpload(${i})">✕</span></div>
+  `).join('');
+}
+function removeUpload(i){
+  uploadedNotes.splice(i,1);
+  renderUploads();
+}
+
+function addTask(){
+  const input = document.getElementById('taskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  studyTasks.push({text, done:false});
+  input.value = '';
+  renderTasks();
+}
+function toggleTask(i){
+  studyTasks[i].done = !studyTasks[i].done;
+  renderTasks();
+}
+function renderTasks(){
+  const list = document.getElementById('taskList');
+  list.innerHTML = studyTasks.map((t,i)=>`
+    <div class="task-item ${t.done ? 'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i})"> ${t.text}
+    </div>
+  `).join('');
+}
+
+function sendFocusLily(){
+  const input = document.getElementById('focusLilyInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const body = document.getElementById('focusLilyBody');
+
+  const me = document.createElement('div');
+  me.className = 'lily-modal-msg me';
+  me.textContent = text;
+  body.appendChild(me);
+  input.value = '';
+  input.style.height = 'auto';
+
+  const typing = document.createElement('div');
+  typing.className = 'lily-typing';
+  typing.id = 'focusTyping';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  body.appendChild(typing);
+  body.scrollTop = body.scrollHeight;
+
+  if(getApiKey()){
+    focusHistory.push({role:'user', content:text});
+    askClaude(focusSystemPrompt(), focusHistory)
+      .then(reply => { focusHistory.push({role:'assistant', content:reply}); appendFocusHer(reply); })
+      .catch(err => { focusHistory.pop(); appendFocusHer(aiErrorMessage(err)); });
+    return;
+  }
+
+  const lower = text.toLowerCase();
+  let reply, showResources = false;
+  if(uploadedNotes.length && (lower.includes('summar') || lower.includes('note'))){
+    reply = pick([
+      `Looking at ${uploadedNotes[uploadedNotes.length-1]} — the core definitions and how they connect to what you already covered are the main things worth holding onto. Want flashcards out of it?`,
+      `From ${uploadedNotes[uploadedNotes.length-1]}, I'd focus on the definitions first, then the examples — those tend to be what gets tested. Want me to turn it into flashcards?`
+    ]);
+  } else if(lower.includes('explain') || lower.includes('clarify') || lower.includes('confus') || lower.includes('what is') || lower.includes('what does')){
+    reply = pick([
+      "Try the Feynman technique on it — explain it out loud like you're teaching a total beginner. Wherever you stumble is exactly where the confusion actually is. Tell me the term and I'll walk through it with you.",
+      "Let's break it down: what problem is this actually solving, and what's the one rule that always applies? Give me the exact term or line and I'll go through it step by step.",
+      "Sometimes it helps to connect it to something you already know — tell me the concept and what you already understand nearby, and I'll bridge the gap."
+    ]);
+  } else if(lower.includes('resource') || lower.includes('find') || lower.includes('link') || lower.includes('video') || lower.includes('article')){
+    reply = pick([
+      "Here's a starting point — a short overview, a deeper read, and something to practice with:",
+      "Found a few angles on this — overview first if you're new to it, or jump to the practice set if you just need reps:"
+    ]);
+    showResources = true;
+  } else if(lower.includes('flashcard') || lower.includes('quiz')){
+    reply = pick([
+      "I can turn your uploaded notes into flashcards — upload them if you haven't, or tell me the topic and I'll draft a set. Active recall like this sticks a lot better than just re-reading.",
+      "Flashcards work best with spaced repetition — short review, gap, review again. Upload your notes or give me the topic and I'll get you started."
+    ]);
+  } else if(lower.includes('tired') || lower.includes('stuck') || lower.includes("can't focus") || lower.includes('cant focus')){
+    reply = pick([
+      "That's usually a sign to take the break, not push through it — the Pomodoro timer up top is set to your own lengths now if you want to adjust it.",
+      "Totally normal partway through a session. Short walk, water, then come back — forcing it usually costs more time than it saves."
+    ]);
+  } else {
+    reply = pick([
+      "Want me to search for resources on that, explain it myself, or help you turn it into notes?",
+      "Upload your notes on this and I can pull out exactly what's relevant.",
+      "I can clarify that, find you a resource, or quiz you on it — which would help most right now?",
+      "Give me a bit more to go on — the specific term, or what you're trying to get done — and I'll help properly."
+    ]);
+  }
+
+  setTimeout(()=>{
+    const t = document.getElementById('focusTyping');
+    if(t) t.remove();
+    const her = document.createElement('div');
+    her.className = 'lily-modal-msg her';
+    her.textContent = reply;
+    body.appendChild(her);
+    if(showResources){
+      const topic = text.replace(/find|resources?|links?|videos?|articles?|about|on|for/gi,'').trim() || 'this topic';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:2px;max-width:80%';
+      wrap.innerHTML = `
+        <div class="resource-card"><strong>📺 Overview video</strong><small>A short walkthrough covering the basics of ${escapeHtml(topic)}</small></div>
+        <div class="resource-card"><strong>📄 Deeper read</strong><small>An article that goes further into ${escapeHtml(topic)}</small></div>
+        <div class="resource-card"><strong>✏️ Practice set</strong><small>A few questions to test what you've got so far</small></div>
+      `;
+      body.appendChild(wrap);
+    }
+    body.scrollTop = body.scrollHeight;
+  }, 700 + Math.random()*500);
+}
+
+/* ============ REAL AI (bring your own key) ============
+   A static page has no model of its own, so with a key Lily calls the Anthropic
+   API straight from the browser; without one she falls back to the pre-written
+   replies above. The key lives only in localStorage on this device. */
+const LILA_DEFAULT_MODEL = 'claude-sonnet-5-5';
+let lilyHistory = [], focusHistory = [];
+
+function getApiKey(){ return localStorage.getItem('lilaApiKey') || ''; }
+function getApiModel(){ return localStorage.getItem('lilaApiModel') || LILA_DEFAULT_MODEL; }
+
+function lilaContext(){
+  const name = currentProfile();
+  const recent = JSON.parse(localStorage.getItem(recentKey()) || '[]').slice(0,5).map(r => r.label).join('; ');
+  return `The person's name is ${name === 'Guest' ? 'not known yet' : name}. Their recent activity in the app: ${recent || 'nothing yet'}.`;
+}
+const LILY_BASE_PROMPT = `You are Lily, the companion inside LILAverse, a personal sanctuary app with a journal, diary, study room, games, music player, mood board, writing studio and research space. Talk like a warm, real person texting a friend: short natural messages, contractions, no headers, no bullet lists unless asked, no stock phrases, and never repeat yourself. Ask at most one question at a time, and only when it helps. You are an AI and say so plainly if asked. You can't see anything in the app beyond what is written below, and you don't remember past conversations, so never pretend to. If someone seems to be in real distress, respond with care and gently encourage them to reach out to someone they trust or a local crisis line. Never write sexual content.`;
+
+function lilySystemPrompt(){
+  return `${LILY_BASE_PROMPT}\n\n${lilaContext()}\n\nYou can suggest the app's own features (Diary, Focus Room, Games, Mood Board, Theme Studio) when they genuinely fit.`;
+}
+function focusSystemPrompt(){
+  const notes = uploadedNotes.length ? `They attached these files in Focus Room: ${uploadedNotes.join(', ')}. You cannot read file contents, only see the names, so ask them to paste the relevant text if you need it.` : 'They have not attached any notes.';
+  return `${LILY_BASE_PROMPT}\n\nRight now you're in Focus Room, helping them study. Explain concepts clearly with examples, quiz them one question at a time, and suggest techniques like active recall, spaced repetition or the Feynman method when useful. Keep answers focused and proportionate. Their timer is set to ${studyMinutes} minutes of study and ${breakMinutes} minutes of break. ${notes}\n\n${lilaContext()}`;
+}
+
+async function askClaude(system, history){
+  if(history.length > 20) history.splice(0, history.length - 20);
+  while(history.length && history[0].role !== 'user') history.shift();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key': getApiKey(),
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({ model:getApiModel(), max_tokens:700, system, messages:history })
+  });
+  if(!res.ok){
+    let detail = '';
+    try{ const j = await res.json(); detail = (j.error && j.error.message) || ''; }catch(e){}
+    throw new Error(res.status + (detail ? ' — ' + detail : ''));
+  }
+  const data = await res.json();
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  if(!text) throw new Error('empty reply');
+  return text;
+}
+function aiErrorMessage(err){
+  return `I couldn't reach the AI just now (${err.message}). Check your key and model in the ⚙️ settings and try again.`;
+}
+function appendFocusHer(text){
+  const t = document.getElementById('focusTyping');
+  if(t) t.remove();
+  const body = document.getElementById('focusLilyBody');
+  const her = document.createElement('div');
+  her.className = 'lily-modal-msg her';
+  her.textContent = text;
+  body.appendChild(her);
+  body.scrollTop = body.scrollHeight;
+}
+
+function toggleLilyApiPanel(){
+  const panel = document.getElementById('lilyApiPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('lilyApiKeyInput').value = getApiKey();
+  document.getElementById('lilyApiModelInput').value = localStorage.getItem('lilaApiModel') || '';
+}
+function saveLilyApi(){
+  const key = document.getElementById('lilyApiKeyInput').value.trim();
+  const model = document.getElementById('lilyApiModelInput').value.trim();
+  if(!key){ showToast('Lily', 'Paste a key first, or use Remove key.'); return; }
+  localStorage.setItem('lilaApiKey', key);
+  if(model) localStorage.setItem('lilaApiModel', model); else localStorage.removeItem('lilaApiModel');
+  lilyHistory = []; focusHistory = [];
+  document.getElementById('lilyApiPanel').style.display = 'none';
+  updateAiStatus();
+  showToast('Lily', 'Connected. Say hi.');
+}
+function clearLilyApi(){
+  localStorage.removeItem('lilaApiKey');
+  localStorage.removeItem('lilaApiModel');
+  lilyHistory = []; focusHistory = [];
+  document.getElementById('lilyApiKeyInput').value = '';
+  document.getElementById('lilyApiModelInput').value = '';
+  updateAiStatus();
+  showToast('Lily', 'Key removed. Back to offline mode.');
+}
+function updateAiStatus(){
+  const on = !!getApiKey();
+  const status = document.getElementById('lilyStatusText');
+  if(status) status.textContent = on ? 'Online — real AI' : 'Offline mode — pre-written replies';
+  const hint = document.getElementById('lilyAiHint');
+  if(hint) hint.style.display = on ? 'none' : 'block';
+}
+
+/* ============ PROFILE SYSTEM ============ */
+function getProfiles(){
+  return JSON.parse(localStorage.getItem('lilaProfiles') || '[]');
+}
+function saveProfiles(list){
+  localStorage.setItem('lilaProfiles', JSON.stringify(list));
+}
+function initProfileSystem(){
+  const activeName = localStorage.getItem('lilaActiveProfile');
+  const profiles = getProfiles();
+  if(activeName && profiles.includes(activeName)){
+    applyProfile(activeName);
+  } else {
+    renderExistingProfiles();
+    document.getElementById('profileBackdrop').classList.add('active');
+  }
+}
+function renderExistingProfiles(){
+  const profiles = getProfiles();
+  const box = document.getElementById('existingProfiles');
+  if(!profiles.length){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="profile-divider">Or continue as</div>' +
+    profiles.map(name => `
+      <div class="profile-chip" onclick="applyProfile('${name.replace(/'/g,"\\'")}')">
+        <div class="profile-avatar">${name.charAt(0).toUpperCase()}</div>
+        <div class="info"><strong>${name}</strong><small>Saved on this device</small></div>
+      </div>
+    `).join('');
+}
+function createProfile(){
+  const input = document.getElementById('profileNameInput');
+  const name = input.value.trim();
+  if(!name) return;
+  const profiles = getProfiles();
+  if(!profiles.includes(name)){
+    profiles.push(name);
+    saveProfiles(profiles);
+  }
+  applyProfile(name);
+}
+function applyProfile(name){
+  localStorage.setItem('lilaActiveProfile', name);
+  document.getElementById('profileBackdrop').classList.remove('active');
+  document.getElementById('profileChipName').textContent = name;
+  document.getElementById('profileAvatarInitial').textContent = name.charAt(0).toUpperCase();
+
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('heroHeading').innerHTML = `${timeGreeting}, <span id="greetName">${name}</span> 🌙`;
+
+  // Scope journal/diary/life entries to this profile
+  ['journal','diary','life'].forEach(tab=>{
+    const key = 'lila-'+name+'-'+tab+'-text';
+    const saved = localStorage.getItem(key);
+    const box = document.getElementById('entry-'+tab);
+    if(box) box.value = saved || '';
+  });
+  renderHistory('journal'); renderHistory('diary'); renderHistory('life');
+  renderRecentSpaces();
+}
+function openProfileSwitcher(){
+  renderExistingProfiles();
+  document.getElementById('profileNameInput').value = '';
+  document.getElementById('profileBackdrop').classList.add('active');
+}
+function currentProfile(){
+  return localStorage.getItem('lilaActiveProfile') || 'Guest';
+}
+
+/* ============ RECENT SPACES (dynamic activity log) ============ */
+function recentKey(){ return 'lila-'+currentProfile()+'-recent'; }
+function logRecentActivity(icon, label){
+  const list = JSON.parse(localStorage.getItem(recentKey()) || '[]');
+  list.unshift({icon, label, time: Date.now()});
+  localStorage.setItem(recentKey(), JSON.stringify(list.slice(0,6)));
+  renderRecentSpaces();
+}
+function renderRecentSpaces(){
+  const box = document.getElementById('recentSpacesList');
+  if(!box) return;
+  const list = JSON.parse(localStorage.getItem(recentKey()) || '[]');
+  if(!list.length){
+    box.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Nothing yet — your recent activity will show up here.</span>';
+    return;
+  }
+  box.innerHTML = list.map(item => `<div>${item.icon} ${escapeHtml(item.label)}</div>`).join('');
+}
+
+/* ============ MUSIC PLAYER ============ */
+let currentMusicSource = 'audio'; // 'audio' | 'youtube' | 'spotify'
+let ytPlayer = null, ytApiReady = false, ytPendingLoad = null;
+
+function openMusicPanel(){ openModal('musicBackdrop'); }
+function closeMusicPanel(){ closeModal('musicBackdrop'); }
+
+function closeMusicBar(){
+  const audio = document.getElementById('audioPlayer');
+  audio.pause();
+  if(ytPlayer && typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
+  document.getElementById('musicBar').classList.remove('active');
+}
+function setMusicVolume(v){
+  const vol = parseFloat(v);
+  document.getElementById('audioPlayer').volume = vol;
+  if(ytPlayer && typeof ytPlayer.setVolume === 'function') ytPlayer.setVolume(vol*100);
+}
+function toggleMusic(){
+  const btn = document.getElementById('mpPlayBtn');
+  if(currentMusicSource === 'youtube'){
+    if(!ytPlayer){ showToast('Music', 'Load a YouTube track first.'); return; }
+    const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+    if(state === 1){ ytPlayer.pauseVideo(); btn.textContent = '▶'; }
+    else { ytPlayer.playVideo(); btn.textContent = '⏸'; }
+    return;
+  }
+  const audio = document.getElementById('audioPlayer');
+  if(!audio.src){ showToast('Music', 'Load a track first — open Music from the sidebar.'); return; }
+  if(audio.paused){
+    audio.play().catch(()=>showToast('Music', "Couldn't play this track — try a different link or file."));
+    btn.textContent = '⏸';
+  } else {
+    audio.pause();
+    btn.textContent = '▶';
+  }
+}
+function playLoadedTrack(title, sub){
+  currentMusicSource = 'audio';
+  const audio = document.getElementById('audioPlayer');
+  document.getElementById('mpTitle').textContent = title;
+  document.getElementById('mpSub').textContent = sub;
+  document.getElementById('musicBar').classList.add('active');
+  audio.play().then(()=>{
+    document.getElementById('mpPlayBtn').textContent = '⏸';
+  }).catch(()=>{
+    document.getElementById('mpPlayBtn').textContent = '▶';
+    showToast('Music', 'Tap play to start — browsers block autoplay until you interact.');
+  });
+}
+document.getElementById('audioPlayer').addEventListener('error', ()=>{
+  if(currentMusicSource !== 'audio') return;
+  showToast('Music', "That link didn't load — try a different one, or upload a file from your device instead.");
+  document.getElementById('mpSub').textContent = 'Failed to load';
+  document.getElementById('mpPlayBtn').textContent = '▶';
+});
+
+/* -- Link detection: routes to YouTube, Spotify, or direct audio -- */
+function extractYouTubeId(url){
+  const patterns = [
+    /(?:youtube\.com|music\.youtube\.com)\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/
+  ];
+  for(const p of patterns){
+    const m = url.match(p);
+    if(m) return m[1];
+  }
+  return null;
+}
+function extractSpotify(url){
+  const m = url.match(/open\.spotify\.com\/(track|album|playlist|episode|show|artist)\/([a-zA-Z0-9]+)/);
+  return m ? { type:m[1], id:m[2] } : null;
+}
+function loadMusicUrl(){
+  const url = document.getElementById('musicUrlInput').value.trim();
+  if(!url) return;
+
+  const ytId = extractYouTubeId(url);
+  if(ytId){ loadYouTubeById(ytId, 'YouTube track', 'Loading title...'); fetchYouTubeTitle(url, ytId); closeMusicPanel(); return; }
+
+  const spotify = extractSpotify(url);
+  if(spotify){ loadSpotifyEmbed(spotify); closeMusicPanel(); return; }
+
+  // Fall back: treat as a direct audio file/stream URL
+  const audio = document.getElementById('audioPlayer');
+  hideSpotifyEmbed();
+  audio.src = url;
+  let name;
+  try{ name = decodeURIComponent(url.split('/').pop().split('?')[0]); } catch(e){ name = 'Custom track'; }
+  playLoadedTrack(name || 'Custom track', 'From URL');
+  closeMusicPanel();
+}
+function loadMusicFile(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  hideSpotifyEmbed();
+  const audio = document.getElementById('audioPlayer');
+  audio.src = URL.createObjectURL(file);
+  playLoadedTrack(file.name, 'From your device');
+  closeMusicPanel();
+}
+
+/* -- Real YouTube playback via the official IFrame Player API -- */
+function ensureYouTubeApi(callback){
+  if(ytApiReady){ callback(); return; }
+  ytPendingLoad = callback;
+  if(document.getElementById('youtubeApiScript')) return;
+  const tag = document.createElement('script');
+  tag.id = 'youtubeApiScript';
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+function onYouTubeIframeAPIReady(){
+  ytApiReady = true;
+  if(ytPendingLoad){ const cb = ytPendingLoad; ytPendingLoad = null; cb(); }
+}
+function loadYouTubeById(videoId, title, sub){
+  hideSpotifyEmbed();
+  currentMusicSource = 'youtube';
+  document.getElementById('audioPlayer').pause();
+  document.getElementById('mpTitle').textContent = title;
+  document.getElementById('mpSub').textContent = sub || 'YouTube';
+  document.getElementById('musicBar').classList.add('active');
+
+  ensureYouTubeApi(()=>{
+    if(!ytPlayer){
+      ytPlayer = new YT.Player('youtubePlayerHost', {
+        height:'1', width:'1', videoId:videoId,
+        playerVars:{ autoplay:1 },
+        events:{
+          onReady:(e)=>{ e.target.playVideo(); document.getElementById('mpPlayBtn').textContent = '⏸'; },
+          onError:()=>{ showToast('Music', "That YouTube video can't be embedded here — try a different link."); }
+        }
+      });
+    } else {
+      ytPlayer.loadVideoById(videoId);
+      document.getElementById('mpPlayBtn').textContent = '⏸';
+    }
+  });
+}
+function fetchYouTubeTitle(url, videoId){
+  fetch('https://www.youtube.com/oembed?url='+encodeURIComponent(url)+'&format=json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if(data && data.title && currentMusicSource === 'youtube'){
+        document.getElementById('mpTitle').textContent = data.title;
+        document.getElementById('mpSub').textContent = data.author_name || 'YouTube';
+      }
+    })
+    .catch(()=>{ /* title lookup is a nice-to-have; playback already works without it */ });
+}
+
+/* -- Spotify: their own embed widget (no auth available from a static page) -- */
+function loadSpotifyEmbed(spotify){
+  currentMusicSource = 'spotify';
+  document.getElementById('audioPlayer').pause();
+  if(ytPlayer && typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
+  document.getElementById('musicBar').classList.remove('active');
+
+  const height = spotify.type === 'track' || spotify.type === 'episode' ? 152 : 352;
+  document.getElementById('spotifyEmbedArea').innerHTML =
+    `<iframe src="https://open.spotify.com/embed/${spotify.type}/${spotify.id}" width="100%" height="${height}" frameborder="0" allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture" style="border-radius:14px"></iframe>`;
+  document.getElementById('spotifyEmbedWrap').style.display = 'block';
+}
+function hideSpotifyEmbed(){
+  document.getElementById('spotifyEmbedArea').innerHTML = '';
+  document.getElementById('spotifyEmbedWrap').style.display = 'none';
+}
+
+/* ============ MOOD BOARD ============ */
+function moodboardKey(){ return 'lila-'+currentProfile()+'-moodboard'; }
+function getMoodItems(){ return JSON.parse(localStorage.getItem(moodboardKey()) || '[]'); }
+function saveMoodItems(items){ localStorage.setItem(moodboardKey(), JSON.stringify(items)); }
+
+function openMoodBoard(){
+  document.getElementById('moodboardBackdrop').classList.add('active');
+  renderMoodBoard();
+}
+function closeMoodBoard(){ closeModal('moodboardBackdrop'); }
+function updateMbPlaceholder(){
+  const type = document.getElementById('mbType').value;
+  const input = document.getElementById('mbInput');
+  const placeholders = {
+    image: 'Paste an image URL...',
+    quote: 'Type a quote that resonates with you...',
+    song: 'Song title — artist...',
+    goal: 'A goal you\'re working toward...'
+  };
+  input.placeholder = placeholders[type];
+}
+function addMoodItem(){
+  const type = document.getElementById('mbType').value;
+  const input = document.getElementById('mbInput');
+  const value = input.value.trim();
+  if(!value) return;
+  const items = getMoodItems();
+  items.unshift({type, value});
+  saveMoodItems(items);
+  input.value = '';
+  logRecentActivity('🌊', 'Added to Mood Board');
+  renderMoodBoard();
+}
+function removeMoodItem(i){
+  const items = getMoodItems();
+  items.splice(i,1);
+  saveMoodItems(items);
+  renderMoodBoard();
+}
+function renderMoodBoard(){
+  const grid = document.getElementById('moodboardGrid');
+  const items = getMoodItems();
+  if(!items.length){
+    grid.innerHTML = '<div class="mb-empty">Your board is empty — add an image, quote, song, or goal above.</div>';
+    return;
+  }
+  grid.innerHTML = items.map((item, i) => {
+    const remove = `<span class="mb-remove" onclick="removeMoodItem(${i})">✕</span>`;
+    if(item.type === 'image'){
+      const safeUrl = item.value.replace(/"/g,'&quot;');
+      return `<div class="mb-item mb-image" style="background-image:url('${safeUrl}')">${remove}<span class="mb-label">🖼 Image</span></div>`;
+    }
+    if(item.type === 'quote'){
+      return `<div class="mb-item mb-quote">${remove}"${escapeHtml(item.value)}"</div>`;
+    }
+    if(item.type === 'song'){
+      return `<div class="mb-item mb-song">${remove}🎵 ${escapeHtml(item.value)}</div>`;
+    }
+    return `<div class="mb-item mb-goal">${remove}🎯 ${escapeHtml(item.value)}</div>`;
+  }).join('');
+}
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ============ GAMES HUB ============ */
+function openGamesHub(){
+  document.getElementById('gamesBackdrop').classList.add('active');
+  closeGame();
+}
+function closeGamesHub(){
+  document.getElementById('gamesBackdrop').classList.remove('active');
+  stopAllGameTimers();
+}
+const gameStarters = {
+  memory: startMemoryGame,
+  wordguess: startWordGuess,
+  math: startMathGame,
+  reaction: resetReactionGame,
+  ttt: startTicTacToe
+};
+function openGame(name){
+  document.getElementById('gamesMenu').style.display = 'none';
+  ['gameMemory','gameWordGuess','gameMath','gameReaction','gameTTT'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  const panelIds = { memory:'gameMemory', wordguess:'gameWordGuess', math:'gameMath', reaction:'gameReaction', ttt:'gameTTT' };
+  document.getElementById(panelIds[name]).style.display = 'block';
+  if(gameStarters[name]) gameStarters[name]();
+}
+function closeGame(){
+  stopAllGameTimers();
+  document.getElementById('gamesMenu').style.display = 'block';
+  ['gameMemory','gameWordGuess','gameMath','gameReaction','gameTTT'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+}
+function stopAllGameTimers(){
+  if(mathTimerHandle) clearInterval(mathTimerHandle);
+  if(reactionTimeoutHandle) clearTimeout(reactionTimeoutHandle);
+}
+
+/* -- Memory Match -- */
+let memoryState = { cards:[], flipped:[], moves:0, matchedCount:0 };
+function startMemoryGame(){
+  const icons = ['📚','🎌','🎮','🎓','🌙','💜','☕','✨'];
+  let deck = [...icons, ...icons];
+  for(let i = deck.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  memoryState = { cards: deck.map(icon=>({icon, flipped:false, matched:false})), flipped:[], moves:0, matchedCount:0 };
+  document.getElementById('memoryWin').classList.remove('show');
+  document.getElementById('memoryMoves').textContent = 'Moves: 0';
+  renderMemoryGrid();
+}
+function renderMemoryGrid(){
+  const grid = document.getElementById('memoryGrid');
+  grid.innerHTML = memoryState.cards.map((c,i) => `
+    <div class="memory-card ${c.flipped?'flipped':''} ${c.matched?'matched':''}" onclick="flipMemoryCard(${i})">
+      ${(c.flipped || c.matched) ? c.icon : ''}
+    </div>
+  `).join('');
+}
+function flipMemoryCard(i){
+  const card = memoryState.cards[i];
+  if(card.flipped || card.matched || memoryState.flipped.length === 2) return;
+  card.flipped = true;
+  memoryState.flipped.push(i);
+  renderMemoryGrid();
+  if(memoryState.flipped.length === 2){
+    memoryState.moves++;
+    document.getElementById('memoryMoves').textContent = 'Moves: '+memoryState.moves;
+    const [a,b] = memoryState.flipped;
+    if(memoryState.cards[a].icon === memoryState.cards[b].icon){
+      memoryState.cards[a].matched = true;
+      memoryState.cards[b].matched = true;
+      memoryState.matchedCount++;
+      memoryState.flipped = [];
+      renderMemoryGrid();
+      if(memoryState.matchedCount === memoryState.cards.length/2){
+        document.getElementById('memoryWin').classList.add('show');
+        logRecentActivity('🧠', 'Won Memory Match');
+      }
+    } else {
+      setTimeout(()=>{
+        memoryState.cards[a].flipped = false;
+        memoryState.cards[b].flipped = false;
+        memoryState.flipped = [];
+        renderMemoryGrid();
+      }, 700);
+    }
+  }
+}
+
+/* -- Word Guess (mini Wordle, LILAverse-themed words) -- */
+let wgState = { answer:'', guesses:[], done:false };
+const wgWords = ['BOOKS','STUDY','ANIME','DREAM','FOCUS','QUIET','WRITE','NOTES','CALMS','MUSIC'];
+function startWordGuess(){
+  wgState = { answer: wgWords[Math.floor(Math.random()*wgWords.length)], guesses:[], done:false };
+  document.getElementById('wgInput').value = '';
+  document.getElementById('wgMsg').textContent = '';
+  renderWordGuess();
+}
+function renderWordGuess(){
+  const grid = document.getElementById('wgGrid');
+  let rows = '';
+  for(let r=0; r<6; r++){
+    const guess = wgState.guesses[r];
+    let cells = '';
+    for(let c=0; c<5; c++){
+      if(guess){
+        const letter = guess[c];
+        let cls = 'absent';
+        if(letter === wgState.answer[c]) cls = 'correct';
+        else if(wgState.answer.includes(letter)) cls = 'present';
+        cells += `<div class="wg-cell ${cls}">${letter}</div>`;
+      } else {
+        cells += `<div class="wg-cell"></div>`;
+      }
+    }
+    rows += `<div class="wg-row">${cells}</div>`;
+  }
+  grid.innerHTML = rows;
+}
+function submitWordGuess(){
+  if(wgState.done) return;
+  const input = document.getElementById('wgInput');
+  const guess = input.value.trim().toUpperCase();
+  if(guess.length !== 5){
+    document.getElementById('wgMsg').textContent = 'Enter a 5-letter word.';
+    return;
+  }
+  wgState.guesses.push(guess);
+  input.value = '';
+  renderWordGuess();
+  if(guess === wgState.answer){
+    wgState.done = true;
+    document.getElementById('wgMsg').textContent = '🎉 Got it in '+wgState.guesses.length+'!';
+    logRecentActivity('🔤', 'Won Word Guess');
+  } else if(wgState.guesses.length >= 6){
+    wgState.done = true;
+    document.getElementById('wgMsg').textContent = 'The word was '+wgState.answer+'. Try again!';
+  } else {
+    document.getElementById('wgMsg').textContent = '';
+  }
+}
+
+/* -- Quick Math -- */
+let mathState = { score:0, answer:0, timeLeft:60 };
+let mathTimerHandle = null;
+function startMathGame(){
+  clearInterval(mathTimerHandle);
+  mathState = { score:0, answer:0, timeLeft:60 };
+  document.getElementById('mathPlayArea').style.display = 'block';
+  document.getElementById('mathFinalArea').style.display = 'none';
+  document.getElementById('mathScore').textContent = 'Score: 0';
+  document.getElementById('mathTimer').textContent = '60s left';
+  document.getElementById('mathInput').value = '';
+  nextMathProblem();
+  mathTimerHandle = setInterval(()=>{
+    mathState.timeLeft--;
+    document.getElementById('mathTimer').textContent = mathState.timeLeft+'s left';
+    if(mathState.timeLeft <= 0){
+      clearInterval(mathTimerHandle);
+      finishMathGame();
+    }
+  }, 1000);
+}
+function nextMathProblem(){
+  const ops = ['+','-','×'];
+  const op = ops[Math.floor(Math.random()*ops.length)];
+  let a, b, answer;
+  if(op === '+'){ a = Math.floor(Math.random()*50)+1; b = Math.floor(Math.random()*50)+1; answer = a+b; }
+  else if(op === '-'){ a = Math.floor(Math.random()*50)+10; b = Math.floor(Math.random()*a); answer = a-b; }
+  else { a = Math.floor(Math.random()*12)+1; b = Math.floor(Math.random()*12)+1; answer = a*b; }
+  mathState.answer = answer;
+  document.getElementById('mathProblem').textContent = `${a} ${op} ${b}`;
+  document.getElementById('mathInput').value = '';
+  document.getElementById('mathInput').focus();
+}
+function submitMathAnswer(){
+  const input = document.getElementById('mathInput');
+  if(input.value === '') return;
+  const val = parseInt(input.value, 10);
+  if(val === mathState.answer){
+    mathState.score++;
+    document.getElementById('mathScore').textContent = 'Score: '+mathState.score;
+  }
+  nextMathProblem();
+}
+function finishMathGame(){
+  document.getElementById('mathPlayArea').style.display = 'none';
+  document.getElementById('mathFinalArea').style.display = 'block';
+  document.getElementById('mathFinalScore').textContent = mathState.score;
+  if(mathState.score > 0) logRecentActivity('➗', `Scored ${mathState.score} in Quick Math`);
+}
+
+/* -- Reaction Test -- */
+let reactionState = { waiting:false, ready:false, startTime:0, best:null };
+let reactionTimeoutHandle = null;
+function resetReactionGame(){
+  clearTimeout(reactionTimeoutHandle);
+  reactionState = { waiting:false, ready:false, startTime:0, best: reactionState.best };
+  const box = document.getElementById('reactionBox');
+  box.className = 'reaction-box';
+  box.textContent = 'Tap to start';
+  document.getElementById('reactionResult').textContent = '';
+  updateReactionBest();
+}
+function updateReactionBest(){
+  const el = document.getElementById('reactionBest');
+  el.textContent = reactionState.best ? `Best: ${reactionState.best}ms` : '';
+}
+function handleReactionClick(){
+  const box = document.getElementById('reactionBox');
+  if(!reactionState.waiting && !reactionState.ready){
+    reactionState.waiting = true;
+    box.className = 'reaction-box waiting';
+    box.textContent = 'Wait for green...';
+    document.getElementById('reactionResult').textContent = '';
+    const delay = 1000 + Math.random()*3000;
+    reactionTimeoutHandle = setTimeout(()=>{
+      reactionState.waiting = false;
+      reactionState.ready = true;
+      reactionState.startTime = Date.now();
+      box.className = 'reaction-box go';
+      box.textContent = 'Click!';
+    }, delay);
+  } else if(reactionState.waiting){
+    clearTimeout(reactionTimeoutHandle);
+    reactionState.waiting = false;
+    box.className = 'reaction-box';
+    box.textContent = 'Too soon! Tap to try again';
+  } else if(reactionState.ready){
+    const ms = Date.now() - reactionState.startTime;
+    reactionState.ready = false;
+    if(!reactionState.best || ms < reactionState.best){
+      reactionState.best = ms;
+      logRecentActivity('⚡', `${ms}ms reaction time`);
+    }
+    box.className = 'reaction-box';
+    box.textContent = 'Tap to try again';
+    document.getElementById('reactionResult').textContent = ms+'ms';
+    updateReactionBest();
+  }
+}
+
+/* -- Tic-Tac-Toe (2 player, same device) -- */
+let tttState = { board:Array(9).fill(''), turn:'X', over:false, scoreX:0, scoreO:0, scoreD:0 };
+const tttWinLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function startTicTacToe(){
+  tttState.board = Array(9).fill('');
+  tttState.turn = 'X';
+  tttState.over = false;
+  renderTicTacToe();
+}
+function renderTicTacToe(){
+  document.getElementById('tttStatus').textContent = tttState.over ? tttStatusText() : `Player ${tttState.turn}'s turn`;
+  const grid = document.getElementById('tttGrid');
+  const winLine = tttState.over ? getTttWinLine() : null;
+  grid.innerHTML = tttState.board.map((v,i) => {
+    const isWin = winLine && winLine.includes(i);
+    const cls = ['ttt-cell', v==='X'?'x-mark':'', v==='O'?'o-mark':'', v?'filled':'', isWin?'win-cell':''].filter(Boolean).join(' ');
+    return `<div class="${cls}" onclick="tttCellClick(${i})">${v}</div>`;
+  }).join('');
+  document.getElementById('tttScoreX').textContent = tttState.scoreX;
+  document.getElementById('tttScoreO').textContent = tttState.scoreO;
+  document.getElementById('tttScoreD').textContent = tttState.scoreD;
+}
+function getTttWinLine(){
+  for(const line of tttWinLines){
+    const [a,b,c] = line;
+    if(tttState.board[a] && tttState.board[a]===tttState.board[b] && tttState.board[a]===tttState.board[c]) return line;
+  }
+  return null;
+}
+function tttStatusText(){
+  const line = getTttWinLine();
+  if(line) return `Player ${tttState.board[line[0]]} wins! 🎉`;
+  return "It's a draw!";
+}
+function tttCellClick(i){
+  if(tttState.over || tttState.board[i]) return;
+  tttState.board[i] = tttState.turn;
+  const winLine = getTttWinLine();
+  if(winLine){
+    tttState.over = true;
+    if(tttState.turn === 'X') tttState.scoreX++; else tttState.scoreO++;
+    logRecentActivity('❌', `Player ${tttState.turn} won Tic-Tac-Toe`);
+  } else if(tttState.board.every(c => c)){
+    tttState.over = true;
+    tttState.scoreD++;
+  } else {
+    tttState.turn = tttState.turn === 'X' ? 'O' : 'X';
+  }
+  renderTicTacToe();
+}
+
+/* ============ WRITING STUDIO ============ */
+function writingKey(){ return 'lila-'+currentProfile()+'-manuscripts'; }
+function getManuscripts(){ return JSON.parse(localStorage.getItem(writingKey()) || '[]'); }
+function saveManuscripts(list){ localStorage.setItem(writingKey(), JSON.stringify(list)); }
+let activeManuscriptId = null, activeChapterId = null;
+
+function openWritingStudio(){
+  document.getElementById('writingBackdrop').classList.add('active');
+  const list = getManuscripts();
+  activeManuscriptId = list.length ? list[0].id : null;
+  activeChapterId = (list.length && list[0].chapters.length) ? list[0].chapters[0].id : null;
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function closeWritingStudio(){ closeModal('writingBackdrop'); }
+
+function newManuscript(){
+  const list = getManuscripts();
+  const id = 'm'+Date.now();
+  const chapterId = 'c'+Date.now();
+  list.unshift({id, title:'Untitled Manuscript', chapters:[{id:chapterId, title:'Chapter 1', content:''}]});
+  saveManuscripts(list);
+  activeManuscriptId = id;
+  activeChapterId = chapterId;
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function deleteManuscript(id, evt){
+  evt.stopPropagation();
+  let list = getManuscripts().filter(m => m.id !== id);
+  saveManuscripts(list);
+  if(activeManuscriptId === id){
+    activeManuscriptId = list.length ? list[0].id : null;
+    activeChapterId = (list.length && list[0].chapters.length) ? list[0].chapters[0].id : null;
+  }
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function selectManuscript(id){
+  activeManuscriptId = id;
+  const m = getManuscripts().find(x=>x.id===id);
+  activeChapterId = (m && m.chapters.length) ? m.chapters[0].id : null;
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function selectChapter(id){
+  activeChapterId = id;
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function newChapter(){
+  const list = getManuscripts();
+  const m = list.find(x=>x.id===activeManuscriptId);
+  if(!m) return;
+  const id = 'c'+Date.now();
+  m.chapters.push({id, title:'Chapter '+(m.chapters.length+1), content:''});
+  saveManuscripts(list);
+  activeChapterId = id;
+  renderManuscriptList();
+  renderWritingEditor();
+}
+function renderManuscriptList(){
+  const list = getManuscripts();
+  const box = document.getElementById('manuscriptList');
+  box.innerHTML = list.map(m => `
+    <div>
+      <div class="split-item ${m.id===activeManuscriptId?'active':''}" onclick="selectManuscript('${m.id}')">
+        <span>📖 ${escapeHtml(m.title)}</span>
+        <span class="del" onclick="deleteManuscript('${m.id}', event)">✕</span>
+      </div>
+      ${m.id===activeManuscriptId ? `
+        <div class="split-sub-list">
+          ${m.chapters.map(c => `<div class="split-sub-item ${c.id===activeChapterId?'active':''}" onclick="selectChapter('${c.id}')">${escapeHtml(c.title)}</div>`).join('')}
+          <div class="split-sub-item" style="color:var(--accent-2)" onclick="newChapter()">+ Add chapter</div>
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+function renderWritingEditor(){
+  const wrap = document.getElementById('writingEditorWrap');
+  const list = getManuscripts();
+  const m = list.find(x=>x.id===activeManuscriptId);
+  if(!m){ wrap.innerHTML = '<div class="split-empty">Create or pick a manuscript to start writing.</div>'; return; }
+  const c = m.chapters.find(x=>x.id===activeChapterId) || m.chapters[0];
+  const totalWords = m.chapters.reduce((sum,ch)=> sum + (ch.content.trim()?ch.content.trim().split(/\s+/).length:0), 0);
+  wrap.innerHTML = `
+    <div class="split-editor-head">
+      <input type="text" id="manuscriptTitleInput" value="${escapeHtml(m.title)}" placeholder="Manuscript title">
+    </div>
+    <div class="split-editor-body">
+      <div class="section-block">
+        <label>Chapter title</label>
+        <input type="text" id="chapterTitleInput" style="width:100%;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;font-size:.95rem" value="${c ? escapeHtml(c.title) : ''}">
+      </div>
+      <div class="section-block" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <label>Content</label>
+        <textarea id="chapterContentInput" style="flex:1;min-height:280px">${c ? escapeHtml(c.content) : ''}</textarea>
+      </div>
+    </div>
+    <div class="split-editor-foot">
+      <span class="split-wordcount">${totalWords} words total in this manuscript</span>
+      <button class="saveBtn" onclick="saveWritingEditor()">Save</button>
+    </div>
+  `;
+}
+function saveWritingEditor(){
+  const list = getManuscripts();
+  const m = list.find(x=>x.id===activeManuscriptId);
+  if(!m) return;
+  m.title = document.getElementById('manuscriptTitleInput').value.trim() || 'Untitled Manuscript';
+  const c = m.chapters.find(x=>x.id===activeChapterId);
+  if(c){
+    c.title = document.getElementById('chapterTitleInput').value.trim() || c.title;
+    c.content = document.getElementById('chapterContentInput').value;
+  }
+  saveManuscripts(list);
+  logRecentActivity('✍️', `Wrote in "${m.title}"`);
+  renderManuscriptList();
+  renderWritingEditor();
+  showToast('Writing Studio', 'Saved.');
+}
+
+/* ============ RESEARCH SPACE ============ */
+function researchKey(){ return 'lila-'+currentProfile()+'-papers'; }
+function getPapers(){ return JSON.parse(localStorage.getItem(researchKey()) || '[]'); }
+function savePapers(list){ localStorage.setItem(researchKey(), JSON.stringify(list)); }
+let activePaperId = null;
+const paperSections = ['Abstract','Introduction','Methods','Results','Discussion','References'];
+
+function openResearchSpace(){
+  document.getElementById('researchBackdrop').classList.add('active');
+  const list = getPapers();
+  activePaperId = list.length ? list[0].id : null;
+  renderPaperList();
+  renderResearchEditor();
+}
+function closeResearchSpace(){ closeModal('researchBackdrop'); }
+function newPaper(){
+  const list = getPapers();
+  const id = 'p'+Date.now();
+  const sections = {};
+  paperSections.forEach(s => sections[s] = '');
+  list.unshift({id, title:'Untitled Paper', sections});
+  savePapers(list);
+  activePaperId = id;
+  renderPaperList();
+  renderResearchEditor();
+}
+function deletePaper(id, evt){
+  evt.stopPropagation();
+  let list = getPapers().filter(p => p.id !== id);
+  savePapers(list);
+  if(activePaperId === id) activePaperId = list.length ? list[0].id : null;
+  renderPaperList();
+  renderResearchEditor();
+}
+function selectPaper(id){
+  activePaperId = id;
+  renderPaperList();
+  renderResearchEditor();
+}
+function renderPaperList(){
+  const list = getPapers();
+  document.getElementById('paperList').innerHTML = list.map(p => `
+    <div class="split-item ${p.id===activePaperId?'active':''}" onclick="selectPaper('${p.id}')">
+      <span>📄 ${escapeHtml(p.title)}</span>
+      <span class="del" onclick="deletePaper('${p.id}', event)">✕</span>
+    </div>
+  `).join('');
+}
+function renderResearchEditor(){
+  const wrap = document.getElementById('researchEditorWrap');
+  const list = getPapers();
+  const p = list.find(x=>x.id===activePaperId);
+  if(!p){ wrap.innerHTML = '<div class="split-empty">Create or pick a paper to start writing.</div>'; return; }
+  const totalWords = paperSections.reduce((sum,s)=> sum + (p.sections[s].trim() ? p.sections[s].trim().split(/\s+/).length : 0), 0);
+  wrap.innerHTML = `
+    <div class="split-editor-head">
+      <input type="text" id="paperTitleInput" value="${escapeHtml(p.title)}" placeholder="Paper title">
+    </div>
+    <div class="split-editor-body">
+      ${paperSections.map(s => `
+        <div class="section-block">
+          <label>${s}</label>
+          <textarea data-section="${s}" class="paper-section-input">${escapeHtml(p.sections[s])}</textarea>
+        </div>
+      `).join('')}
+    </div>
+    <div class="split-editor-foot">
+      <span class="split-wordcount">${totalWords} words total</span>
+      <button class="saveBtn" onclick="saveResearchEditor()">Save</button>
+    </div>
+  `;
+}
+function saveResearchEditor(){
+  const list = getPapers();
+  const p = list.find(x=>x.id===activePaperId);
+  if(!p) return;
+  p.title = document.getElementById('paperTitleInput').value.trim() || 'Untitled Paper';
+  document.querySelectorAll('.paper-section-input').forEach(box => {
+    p.sections[box.dataset.section] = box.value;
+  });
+  savePapers(list);
+  logRecentActivity('🔬', `Worked on "${p.title}"`);
+  renderPaperList();
+  renderResearchEditor();
+  showToast('Research Space', 'Saved.');
+}
+
+/* ============ COMMUNITY ============ */
+function communityKey(){ return 'lila-'+currentProfile()+'-posts'; }
+function getPosts(){
+  const stored = localStorage.getItem(communityKey());
+  if(stored) return JSON.parse(stored);
+  const seed = [
+    {id:'seed1', tag:'Books', title:'Anyone else re-reading Dracula this month?', body:"The epistolary format hits different on a second read. Curious what others picked up on.", author:'demo_reader', votes:12, myVote:0, comments:[{author:'demo_fan', text:'The journal-entry pacing really works for horror.'}]},
+    {id:'seed2', tag:'Study', title:'Pomodoro but make it 40/10 — thoughts?', body:'25/5 felt too choppy for deep reading. Curious if anyone else stretched their blocks.', author:'demo_student', votes:7, myVote:0, comments:[]},
+  ];
+  localStorage.setItem(communityKey(), JSON.stringify(seed));
+  return seed;
+}
+function savePosts(list){ localStorage.setItem(communityKey(), JSON.stringify(list)); }
+function openCommunity(){
+  document.getElementById('communityBackdrop').classList.add('active');
+  renderPosts();
+}
+function closeCommunity(){ closeModal('communityBackdrop'); }
+function addPost(){
+  const tag = document.getElementById('postTag').value;
+  const title = document.getElementById('postTitle').value.trim();
+  const body = document.getElementById('postBody').value.trim();
+  if(!title){ showToast('Community', 'Give your post a title first.'); return; }
+  const list = getPosts();
+  list.unshift({id:'post'+Date.now(), tag, title, body, author:currentProfile(), votes:0, myVote:0, comments:[]});
+  savePosts(list);
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postBody').value = '';
+  logRecentActivity('🗣️', `Posted "${title}"`);
+  renderPosts();
+}
+function votePost(id, dir){
+  const list = getPosts();
+  const post = list.find(p=>p.id===id);
+  if(!post) return;
+  if(post.myVote === dir){ post.votes -= dir; post.myVote = 0; }
+  else { post.votes += (dir - post.myVote); post.myVote = dir; }
+  savePosts(list);
+  renderPosts();
+}
+function toggleComments(id){
+  const box = document.getElementById('comments-'+id);
+  if(box) box.classList.toggle('open');
+}
+function addComment(id){
+  const input = document.getElementById('commentInput-'+id);
+  const text = input.value.trim();
+  if(!text) return;
+  const list = getPosts();
+  const post = list.find(p=>p.id===id);
+  post.comments.push({author:currentProfile(), text});
+  savePosts(list);
+  renderPosts();
+  const box = document.getElementById('comments-'+id);
+  if(box) box.classList.add('open');
+}
+function renderPosts(){
+  const list = getPosts();
+  document.getElementById('postFeed').innerHTML = list.map(post => `
+    <div class="post-card">
+      <div class="post-tag">${post.tag}</div>
+      <div class="post-title">${escapeHtml(post.title)}</div>
+      ${post.body ? `<div class="post-body">${escapeHtml(post.body)}</div>` : ''}
+      <div class="post-meta">
+        <div class="vote-group">
+          <button class="vote-btn ${post.myVote===1?'voted-up':''}" onclick="votePost('${post.id}',1)">▲</button>
+          <span>${post.votes}</span>
+          <button class="vote-btn ${post.myVote===-1?'voted-down':''}" onclick="votePost('${post.id}',-1)">▼</button>
+        </div>
+        <span>u/${escapeHtml(post.author)}</span>
+        <span class="comment-toggle" onclick="toggleComments('${post.id}')">💬 ${post.comments.length} comments</span>
+      </div>
+      <div class="comments-box" id="comments-${post.id}">
+        ${post.comments.map(c => `<div class="comment-item"><strong>${escapeHtml(c.author)}</strong> — ${escapeHtml(c.text)}</div>`).join('')}
+        <div class="comment-row">
+          <input type="text" id="commentInput-${post.id}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment('${post.id}')">
+          <button class="ghostBtn" onclick="addComment('${post.id}')">Reply</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+renderClock();
+initProfileSystem();
+loadBlobSettings();
+updateAiStatus();
+</script>
+
+<div class="music-bar" id="musicBar">
+  <button class="mp-play" id="mpPlayBtn" onclick="toggleMusic()">▶</button>
+  <div class="mp-info">
+    <div class="title" id="mpTitle">No track loaded</div>
+    <div class="sub" id="mpSub">Open Music to load something</div>
+  </div>
+  <input type="range" class="mp-vol" min="0" max="1" step="0.01" value="0.6" oninput="setMusicVolume(this.value)">
+  <span class="mp-close" onclick="closeMusicBar()">✕</span>
+</div>
+
+<!-- Writing Studio -->
+<div class="split-backdrop" id="writingBackdrop" onclick="if(event.target===this)closeWritingStudio()">
+  <div class="split-room">
+    <div class="split-list">
+      <div class="split-list-head"><h3>✍️ Manuscripts</h3><span class="x" onclick="closeWritingStudio()">✕</span></div>
+      <div class="split-newbtn" onclick="newManuscript()">+ New manuscript</div>
+      <div class="split-items" id="manuscriptList"></div>
+    </div>
+    <div class="split-editor" id="writingEditorWrap">
+      <div class="split-empty" id="writingEmpty">Create or pick a manuscript to start writing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Research Space -->
+<div class="split-backdrop" id="researchBackdrop" onclick="if(event.target===this)closeResearchSpace()">
+  <div class="split-room">
+    <div class="split-list">
+      <div class="split-list-head"><h3>🔬 Papers</h3><span class="x" onclick="closeResearchSpace()">✕</span></div>
+      <div class="split-newbtn" onclick="newPaper()">+ New paper</div>
+      <div class="split-items" id="paperList"></div>
+    </div>
+    <div class="split-editor" id="researchEditorWrap">
+      <div class="split-empty" id="researchEmpty">Create or pick a paper to start writing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Community -->
+<div class="dash-backdrop" id="communityBackdrop" onclick="if(event.target===this)closeCommunity()">
+  <div class="dashboard" style="width:min(640px,94vw)">
+    <div class="dash-head">
+      <h2>🗣️ Community</h2>
+      <span class="x" onclick="closeCommunity()">✕</span>
+    </div>
+    <div class="tab-panels">
+      <p class="prompt-line" style="font-size:.78rem">This is a local space on your device — posts you add here stay with your profile, not shared with other people.</p>
+      <div class="community-compose">
+        <div class="community-compose-row">
+          <select id="postTag">
+            <option value="Books">📚 Books</option>
+            <option value="Anime">🎌 Anime</option>
+            <option value="Study">🎓 Study</option>
+            <option value="Games">🎮 Games</option>
+            <option value="Life">💜 Life</option>
+          </select>
+          <input type="text" id="postTitle" placeholder="Title..." style="flex:1">
+        </div>
+        <textarea id="postBody" placeholder="What's on your mind?"></textarea>
+        <button class="saveBtn" style="align-self:flex-end" onclick="addPost()">Post</button>
+      </div>
+      <div id="postFeed"></div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-backdrop" id="gamesBackdrop" onclick="if(event.target===this)closeGamesHub()">
+  <div class="dashboard" style="width:min(560px,94vw)">
+    <div class="dash-head">
+      <h2 id="gamesTitle">🕹️ Games</h2>
+      <span class="x" onclick="closeGamesHub()">✕</span>
+    </div>
+    <div class="tab-panels">
+
+      <div id="gamesMenu">
+        <div class="games-grid">
+          <div class="game-card" onclick="openGame('memory')">
+            <span class="ico">🧠</span>Memory Match<small>Flip and match pairs</small>
+            <div class="game-badge solo">SOLO</div>
+          </div>
+          <div class="game-card" onclick="openGame('wordguess')">
+            <span class="ico">🔤</span>Word Guess<small>Guess the 5-letter word</small>
+            <div class="game-badge solo">SOLO</div>
+          </div>
+          <div class="game-card" onclick="openGame('math')">
+            <span class="ico">➗</span>Quick Math<small>60 seconds, as many as you can</small>
+            <div class="game-badge solo">SOLO</div>
+          </div>
+          <div class="game-card" onclick="openGame('reaction')">
+            <span class="ico">⚡</span>Reaction Test<small>How fast are your reflexes?</small>
+            <div class="game-badge solo">SOLO</div>
+          </div>
+          <div class="game-card" onclick="openGame('ttt')">
+            <span class="ico">❌</span>Tic-Tac-Toe<small>Pass the device, take turns</small>
+            <div class="game-badge two-player">2 PLAYER</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gameMemory" style="display:none">
+        <span class="game-back" onclick="closeGame()">← Back to Games</span>
+        <div class="memory-header">
+          <span id="memoryMoves">Moves: 0</span>
+          <button class="ghostBtn" onclick="startMemoryGame()">Restart</button>
+        </div>
+        <div class="memory-grid" id="memoryGrid"></div>
+        <div class="memory-win" id="memoryWin">🎉 Solved it! Nice focus.</div>
+      </div>
+
+      <div id="gameWordGuess" style="display:none">
+        <span class="game-back" onclick="closeGame()">← Back to Games</span>
+        <div class="wg-grid" id="wgGrid"></div>
+        <div class="wg-input-row">
+          <input type="text" id="wgInput" maxlength="5" placeholder="GUESS" onkeydown="if(event.key==='Enter')submitWordGuess()">
+          <button class="saveBtn" onclick="submitWordGuess()">Enter</button>
+        </div>
+        <div class="wg-msg" id="wgMsg"></div>
+      </div>
+
+      <div id="gameMath" style="display:none">
+        <span class="game-back" onclick="closeGame()">← Back to Games</span>
+        <div id="mathPlayArea">
+          <div class="math-timer" id="mathTimer">60s left</div>
+          <div class="math-problem" id="mathProblem">–</div>
+          <div class="math-input-row">
+            <input type="number" id="mathInput" placeholder="?" onkeydown="if(event.key==='Enter')submitMathAnswer()">
+            <button class="saveBtn" onclick="submitMathAnswer()">✓</button>
+          </div>
+          <div class="math-score" id="mathScore">Score: 0</div>
+        </div>
+        <div id="mathFinalArea" class="math-final" style="display:none">
+          <div>Time's up!</div>
+          <div class="big-score" id="mathFinalScore">0</div>
+          <div style="color:var(--muted);font-size:.85rem;margin-bottom:14px">correct answers</div>
+          <button class="saveBtn" onclick="startMathGame()">Play Again</button>
+        </div>
+      </div>
+
+      <div id="gameReaction" style="display:none">
+        <span class="game-back" onclick="closeGame()">← Back to Games</span>
+        <div class="reaction-box" id="reactionBox" onclick="handleReactionClick()">Tap to start</div>
+        <div class="reaction-result" id="reactionResult"></div>
+        <div class="reaction-best" id="reactionBest"></div>
+      </div>
+
+      <div id="gameTTT" style="display:none">
+        <span class="game-back" onclick="closeGame()">← Back to Games</span>
+        <div class="ttt-status" id="tttStatus">Player X's turn</div>
+        <div class="ttt-grid" id="tttGrid"></div>
+        <div style="text-align:center">
+          <button class="ghostBtn" onclick="startTicTacToe()">New Round</button>
+        </div>
+        <div class="ttt-score">
+          <span>❌ <strong id="tttScoreX">0</strong></span>
+          <span>Draws <strong id="tttScoreD">0</strong></span>
+          <span>⭕ <strong id="tttScoreO">0</strong></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="dash-backdrop" id="moodboardBackdrop" onclick="if(event.target===this)closeMoodBoard()">
+  <div class="dashboard" style="width:min(760px,94vw)">
+    <div class="dash-head">
+      <h2>🌊 Mood Board</h2>
+      <span class="x" onclick="closeMoodBoard()">✕</span>
+    </div>
+    <div class="tab-panels">
+      <p class="prompt-line">Add images, quotes, songs, and goals — your board, saved to your profile.</p>
+      <div class="moodboard-add-row">
+        <select id="mbType" onchange="updateMbPlaceholder()">
+          <option value="image">🖼 Image (paste a URL)</option>
+          <option value="quote">💬 Quote</option>
+          <option value="song">🎵 Song (title / artist)</option>
+          <option value="goal">🎯 Goal</option>
+        </select>
+        <input type="text" id="mbInput" placeholder="Paste an image URL..." onkeydown="if(event.key==='Enter')addMoodItem()">
+        <button class="saveBtn" onclick="addMoodItem()">Add</button>
+      </div>
+      <div class="moodboard-grid" id="moodboardGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-backdrop" id="musicBackdrop" onclick="if(event.target===this)closeMusicPanel()">
+  <div class="dashboard" style="width:min(520px,92vw)">
+    <div class="dash-head">
+      <h2>🎧 Music</h2>
+      <span class="x" onclick="closeMusicPanel()">✕</span>
+    </div>
+    <div class="tab-panels">
+      <p class="prompt-line">Paste a YouTube, YouTube Music, or Spotify link — or any direct audio URL — and it'll play in the background.</p>
+      <div class="music-panel-row">
+        <input type="text" id="musicUrlInput" placeholder="Paste a link (YouTube, YouTube Music, Spotify, or audio URL)..." onkeydown="if(event.key==='Enter')loadMusicUrl()">
+        <button class="saveBtn" onclick="loadMusicUrl()">Load</button>
+      </div>
+      <div class="music-panel-row">
+        <input type="file" id="musicFileInput" accept="audio/*" onchange="loadMusicFile(event)" style="flex:1">
+      </div>
+
+      <div id="spotifyEmbedWrap" style="display:none;margin-top:14px">
+        <p style="color:var(--muted);font-size:.75rem;margin-bottom:8px">Spotify plays in its own player below — Spotify controls playback directly (full streaming needs a Spotify account); our play bar won't control it.</p>
+        <div id="spotifyEmbedArea"></div>
+      </div>
+
+      <p class="prompt-line" style="margin-top:18px;margin-bottom:10px">🎵 A couple to start with</p>
+      <div class="music-presets" id="musicPresets">
+        <div class="music-preset-chip" onclick="loadYouTubeById('jfKfPfyJRdk','lofi hip hop radio 📚 beats to relax/study to','Lofi Girl')">🎧 Lofi Girl radio</div>
+        <div class="music-preset-chip" onclick="loadYouTubeById('q76bMs-NwRk','3 Hours of Gentle Night Rain','Rain Sounds')">🌧 Gentle night rain</div>
+      </div>
+      <p style="color:var(--muted);font-size:.75rem;margin-top:10px">These two are real YouTube videos, playing via YouTube's own embedded player. Paste any other link above for anything else.</p>
+
+      <div id="youtubePlayerHost" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
